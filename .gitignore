@@ -1,0 +1,71 @@
+# 운영체제 / 파일 탐색기
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 에디터 / IDE
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse / STS
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# Gradle / JVM 빌드 산출물
+.gradle/
+.gradle-test-kit/
+build/
+out/
+target/
+!backend/gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# 로그 / 런타임 덤프
+logs/
+*.log
+*.pid
+*.pid.lock
+*.seed
+*.stackdump
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# 테스트 / 커버리지 산출물
+coverage/
+jacoco.exec
+*.lcov
+
+# 환경변수 / 로컬 설정 / 비밀값
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.yaml
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-*.local.yml
+backend/src/main/resources/application-*.local.yaml
+backend/src/main/resources/application-*.local.properties
+
+# 임시 파일
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
