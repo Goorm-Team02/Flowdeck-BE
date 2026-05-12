@@ -1,0 +1,43 @@
+name: Branch Policy Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+
+jobs:
+  validate-branch-policy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate branch naming and target
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          branch_pattern='^(feature|fix|refactor|docs)/[a-z0-9]+(-[a-z0-9]+)*$'
+
+          if [[ "$BASE_REF" == "main" ]]; then
+            if [[ "$HEAD_REF" != "develop" ]]; then
+              echo "::error::Only develop can open a pull request into main."
+              exit 1
+            fi
+            exit 0
+          fi
+
+          if [[ "$BASE_REF" != "develop" ]]; then
+            echo "::error::Pull requests must target develop. Only release PRs from develop may target main."
+            exit 1
+          fi
+
+          if ! [[ "$HEAD_REF" =~ $branch_pattern ]]; then
+            echo "::error::Invalid branch name: $HEAD_REF"
+            echo "::error::Use feature/*, fix/*, refactor/*, or docs/* with lowercase kebab-case names."
+            exit 1
+          fi
