@@ -1,0 +1,58 @@
+# 백엔드 컨벤션
+
+## 1. 품질 검사 기준
+
+- 코드 포맷: Spotless + google-java-format
+- 정적 스타일 검사: Checkstyle
+- 구조 규칙 검사: ArchUnit
+- CI 실행 명령어: `./gradlew check`
+
+## 2. 패키지 구조
+
+모든 백엔드 코드는 `com.flowdeck.backend` 아래에서 시작합니다.
+
+```text
+com.flowdeck.backend
+├── global
+│   ├── config
+│   ├── error
+│   └── security
+└── {feature}
+    ├── controller
+    ├── service
+    ├── dto
+    ├── domain
+    └── repository
+```
+
+## 3. 계층별 역할
+
+- `controller`: 요청 매핑, 입력 검증, 인증 사용자 바인딩, 응답 조립
+- `service`: 비즈니스 로직, 트랜잭션 경계 설정, repository 및 외부 클라이언트 호출 조합
+- `repository`: 영속성 처리만 담당, HTTP 관련 로직 금지
+- `domain`: 엔티티 상태와 도메인 동작 표현
+- `global`: 공통 설정, 보안, 예외 처리 같은 횡단 관심사 담당
+
+## 4. 처리 규칙
+
+- `controller`는 `repository`를 직접 호출하면 안 됩니다.
+- 트랜잭션 처리는 `service` 계층에만 둡니다.
+- 의존성 주입은 생성자 주입만 사용합니다. `@Autowired` 필드 주입은 금지합니다.
+- 요청과 응답은 DTO로 주고받습니다. `controller`에서 엔티티를 직접 노출하지 않습니다.
+- 비즈니스 예외 처리는 하나의 `@RestControllerAdvice`로 모읍니다.
+- 입력값 검증은 `controller` 경계에서 `@Valid`로 처리합니다.
+
+## 5. 로컬 작업 방법
+
+Gradle 실행 JDK는 21을 사용합니다. JDK 17에서는 포맷터가 안정적으로 동작하지 않습니다.
+
+```bash
+cd backend
+./gradlew spotlessApply
+./gradlew check
+```
+
+- `spotlessApply`: Java 코드 포맷을 자동으로 맞춥니다.
+- `check`: 포맷, 스타일, 구조 규칙, 테스트를 한 번에 검사합니다.
+
+커밋 전에 포맷이 바뀌었을 수 있으면 `spotlessApply`를 먼저 실행합니다. `check`는 CI가 pull request와 보호 브랜치에서 실행하는 것과 같은 검증입니다.
