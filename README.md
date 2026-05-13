@@ -3,9 +3,17 @@
 ## Backend Quality Gate
 
 - Backend conventions: [`backend/docs/conventions.md`](backend/docs/conventions.md)
+- Collaboration guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Gradle runtime JDK: 21
 - Format Java code: `cd backend && ./gradlew spotlessApply`
 - Run the same verification as CI: `cd backend && ./gradlew check`
+
+## 브랜치 전략 요약
+
+- 기준 브랜치: `develop`
+- 작업 브랜치: `feature/*`, `fix/*`, `refactor/*`, `docs/*`
+- 배포/최종 제출: `develop`을 검증한 뒤 `main`으로 반영
+- 상세 규칙과 작업 흐름: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## 개발용 데이터베이스
 
