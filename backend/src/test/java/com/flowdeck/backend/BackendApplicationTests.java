@@ -1,5 +1,6 @@
 package com.flowdeck.backend;
 
+import com.flowdeck.backend.support.TestRepositoryConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
