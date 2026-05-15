@@ -3,6 +3,12 @@ spring:
     name: backend
   profiles:
     default: local
+  jpa:
+    open-in-view: false
+    show-sql: ${JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
 
 ---
 spring:
@@ -15,10 +21,5 @@ spring:
     password: ${DB_PASSWORD:flowdeck}
     driver-class-name: org.postgresql.Driver
   jpa:
-    open-in-view: false
-    show-sql: ${JPA_SHOW_SQL:true}
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
-    properties:
-      hibernate:
-        format_sql: true
