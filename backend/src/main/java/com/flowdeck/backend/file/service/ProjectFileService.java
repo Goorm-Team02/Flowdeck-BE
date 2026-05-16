@@ -5,6 +5,7 @@ import com.flowdeck.backend.file.dto.ProjectFileCreateRequest;
 import com.flowdeck.backend.file.dto.ProjectFileMoveRequest;
 import com.flowdeck.backend.file.dto.ProjectFileRenameRequest;
 import com.flowdeck.backend.file.dto.ProjectFileResponse;
+import com.flowdeck.backend.file.dto.ProjectFileSearchResponse;
 import com.flowdeck.backend.file.dto.ProjectFileTreeResponse;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
@@ -79,6 +80,22 @@ public class ProjectFileService {
     ProjectFile file = getFile(project, fileId);
 
     return ProjectFileResponse.from(file);
+  }
+
+  @Transactional(readOnly = true)
+  public List<ProjectFileSearchResponse> searchFiles(String projectId, String keyword) {
+    if (keyword == null || keyword.isBlank()) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    Project project = getProject(projectId);
+    String normalizedKeyword = keyword.trim();
+
+    return projectFileRepository
+        .findAllByProjectAndNameContainingIgnoreCaseOrderByNameAsc(project, normalizedKeyword)
+        .stream()
+        .map(ProjectFileSearchResponse::from)
+        .toList();
   }
 
   @Transactional

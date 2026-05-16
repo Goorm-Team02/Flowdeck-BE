@@ -4,6 +4,7 @@ import com.flowdeck.backend.file.dto.ProjectFileCreateRequest;
 import com.flowdeck.backend.file.dto.ProjectFileMoveRequest;
 import com.flowdeck.backend.file.dto.ProjectFileRenameRequest;
 import com.flowdeck.backend.file.dto.ProjectFileResponse;
+import com.flowdeck.backend.file.dto.ProjectFileSearchResponse;
 import com.flowdeck.backend.file.dto.ProjectFileTreeResponse;
 import com.flowdeck.backend.file.service.ProjectFileService;
 import com.flowdeck.backend.global.response.ApiResponse;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -45,6 +47,12 @@ public class ProjectFileController {
   @GetMapping
   public ApiResponse<List<ProjectFileTreeResponse>> getFileTree(@PathVariable String projectId) {
     return ApiResponse.success(projectFileService.getFileTree(projectId));
+  }
+
+  @GetMapping("/search")
+  public ApiResponse<List<ProjectFileSearchResponse>> searchFiles(
+      @PathVariable String projectId, @RequestParam String keyword) {
+    return ApiResponse.success(projectFileService.searchFiles(projectId, keyword));
   }
 
   @GetMapping("/{fileId}")
