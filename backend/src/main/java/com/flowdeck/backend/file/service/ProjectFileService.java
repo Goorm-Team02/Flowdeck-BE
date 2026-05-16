@@ -12,6 +12,7 @@ import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,11 +25,15 @@ public class ProjectFileService {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
+  private final FileVersionRepository fileVersionRepository;
 
   public ProjectFileService(
-      ProjectRepository projectRepository, ProjectFileRepository projectFileRepository) {
+      ProjectRepository projectRepository,
+      ProjectFileRepository projectFileRepository,
+      FileVersionRepository fileVersionRepository) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
+    this.fileVersionRepository = fileVersionRepository;
   }
 
   @Transactional
@@ -192,7 +197,10 @@ public class ProjectFileService {
       deleteRecursive(child);
     }
 
-    // TODO: FileVersion 도메인 추가 후 파일 버전 삭제 로직 연결
+    if (file.isFile()) {
+      fileVersionRepository.deleteAllByFile(file);
+    }
+
     projectFileRepository.delete(file);
   }
 }
