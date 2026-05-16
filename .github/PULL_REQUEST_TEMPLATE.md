@@ -33,6 +33,7 @@
 
 ## 브랜치 및 머지 확인
 
-- [ ] base 브랜치가 `develop`. `main` 대상 PR일 시, source 브랜치는 `develop`
+- [ ] base 브랜치가 `develop` 또는 부모 작업 브랜치. `main` 대상 PR일 시, source 브랜치는 `develop`
+- [ ] 스택형 PR이면 source 브랜치 이름이 base 브랜치 이름을 접두사로 확장한 형태
 - [ ] source 브랜치 이름 : `feature/*`, `fix/*`, `refactor/*`, `docs/*` 
 - [ ] 필요한 테스트나 문서 반영 여부
