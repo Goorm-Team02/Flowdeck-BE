@@ -11,6 +11,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+/** 애플리케이션 레이어 의존성과 네이밍 규칙이 아키텍처 제약을 지키는지 검증한다. */
 @AnalyzeClasses(packages = "com.flowdeck.backend")
 class ArchitectureRulesTest {
 

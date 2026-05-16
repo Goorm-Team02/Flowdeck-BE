@@ -15,32 +15,26 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.global.response.ApiResponse;
 import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
+import com.flowdeck.backend.support.WebIntegrationTest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@ActiveProfiles("test")
-@SpringBootTest(
-    classes = {
-      BackendApplication.class,
-      GlobalApiFoundationIntegrationTest.TestSupportConfig.class,
-    })
-@AutoConfigureMockMvc
+/** 공통 응답 포맷, 예외 처리, CORS, JWT 보안 등 전역 API 동작을 격리된 웹 테스트 컨텍스트에서 검증한다. */
+@WebIntegrationTest
+@Import(GlobalApiFoundationIntegrationTest.TestSupportConfig.class)
 class GlobalApiFoundationIntegrationTest {
 
   private final MockMvc mockMvc;

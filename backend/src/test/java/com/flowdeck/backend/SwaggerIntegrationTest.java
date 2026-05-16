@@ -5,16 +5,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.flowdeck.backend.support.WebIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@ActiveProfiles("test")
-@SpringBootTest
-@AutoConfigureMockMvc
+/** 격리된 웹 테스트 컨텍스트에서 Swagger UI와 OpenAPI 문서 엔드포인트가 정상 노출되는지 검증한다. */
+@WebIntegrationTest
 class SwaggerIntegrationTest {
 
   private final MockMvc mockMvc;
