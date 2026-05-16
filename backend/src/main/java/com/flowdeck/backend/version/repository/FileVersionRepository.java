@@ -5,6 +5,9 @@ import com.flowdeck.backend.version.domain.FileVersion;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface FileVersionRepository extends JpaRepository<FileVersion, Long> {
 
@@ -14,5 +17,7 @@ public interface FileVersionRepository extends JpaRepository<FileVersion, Long> 
 
   Optional<FileVersion> findByFileAndVersionNumber(ProjectFile file, int versionNumber);
 
-  void deleteAllByFile(ProjectFile file);
+  @Modifying(flushAutomatically = true)
+  @Query("delete from FileVersion version where version.file = :file")
+  void deleteAllByFile(@Param("file") ProjectFile file);
 }
