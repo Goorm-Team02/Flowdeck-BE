@@ -1,4 +1,4 @@
-package com.flowdeck.backend;
+package com.flowdeck.backend.isolated;
 
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -15,7 +15,7 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.global.response.ApiResponse;
 import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
-import com.flowdeck.backend.support.WebIntegrationTest;
+import com.flowdeck.testsupport.WebIntegrationTest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;

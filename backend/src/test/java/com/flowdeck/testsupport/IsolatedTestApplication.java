@@ -1,4 +1,4 @@
-package com.flowdeck.backend.support;
+package com.flowdeck.testsupport;
 
 import com.flowdeck.backend.global.config.CorsConfig;
 import com.flowdeck.backend.global.config.CorsProperties;
