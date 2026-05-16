@@ -1,17 +1,21 @@
-package com.flowdeck.backend;
+package com.flowdeck.backend.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-@AnalyzeClasses(packages = "com.flowdeck.backend")
+/** 애플리케이션 레이어 의존성과 네이밍 규칙이 아키텍처 제약을 지키는지 검증한다. */
+@AnalyzeClasses(
+    packages = "com.flowdeck.backend",
+    importOptions = {ImportOption.DoNotIncludeTests.class})
 class ArchitectureRulesTest {
 
   @ArchTest
