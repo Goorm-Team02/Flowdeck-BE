@@ -9,7 +9,7 @@
 
 ## 2. 패키지 구조
 
-모든 백엔드 코드는 `com.flowdeck.backend` 아래에서 시작합니다.
+운영 백엔드 코드는 `com.flowdeck.backend` 아래에서 시작합니다.
 
 ```text
 com.flowdeck.backend
@@ -24,6 +24,17 @@ com.flowdeck.backend
     ├── domain
     └── repository
 ```
+
+테스트 코드는 목적에 따라 `com.flowdeck.backend.{category}` 아래에 배치합니다.
+
+- `com.flowdeck.backend.architecture`
+- `com.flowdeck.backend.integration`
+- `com.flowdeck.backend.isolated`
+- `com.flowdeck.backend.unit`
+
+스프링 부트 기본 기동 스모크 테스트는 관례에 따라 `com.flowdeck.backend.BackendApplicationTests`에 둘 수 있습니다.
+
+공통 테스트 애노테이션과 격리 테스트 부트스트랩 코드는 메인 애플리케이션 스캔과 분리하기 위해 `com.flowdeck.testsupport` 패키지를 사용할 수 있습니다.
 
 ## 3. 계층별 역할
 
