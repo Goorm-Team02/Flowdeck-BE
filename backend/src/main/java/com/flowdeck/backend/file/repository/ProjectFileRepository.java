@@ -17,4 +17,7 @@ public interface ProjectFileRepository extends JpaRepository<ProjectFile, Long> 
   boolean existsByProjectAndParentAndName(Project project, ProjectFile parent, String name);
 
   boolean existsByProjectAndParentIsNullAndName(Project project, String name);
+
+  List<ProjectFile> findAllByProjectAndNameContainingIgnoreCaseOrderByNameAsc(
+      Project project, String keyword);
 }
