@@ -9,17 +9,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(
-    properties = {
-      "spring.autoconfigure.exclude="
-          + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
-          + "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration,"
-          + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
-          + "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration",
-      "app.jpa.auditing.enabled=false",
-    })
+@ActiveProfiles("test")
+@SpringBootTest
 @AutoConfigureMockMvc
 class SwaggerIntegrationTest {
 

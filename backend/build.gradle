@@ -54,6 +54,7 @@ dependencies {
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
