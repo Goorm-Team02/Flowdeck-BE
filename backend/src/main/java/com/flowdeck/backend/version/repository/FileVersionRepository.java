@@ -17,7 +17,9 @@ public interface FileVersionRepository extends JpaRepository<FileVersion, Long> 
 
   Optional<FileVersion> findByFileAndVersionNumber(ProjectFile file, int versionNumber);
 
-  @Modifying(flushAutomatically = true)
-  @Query("delete from FileVersion version where version.file = :file")
-  void deleteAllByFile(@Param("file") ProjectFile file);
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("delete from FileVersion version where version.file.id = :fileId")
+  void deleteAllByFileId(@Param("fileId") Long fileId);
+
+  boolean existsByFileId(Long fileId);
 }

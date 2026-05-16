@@ -1,5 +1,6 @@
 package com.flowdeck.backend.project.service;
 
+import com.flowdeck.backend.file.service.ProjectFileDeletionService;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.project.domain.Project;
@@ -17,9 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectService {
 
   private final ProjectRepository projectRepository;
+  private final ProjectFileDeletionService projectFileDeletionService;
 
-  public ProjectService(ProjectRepository projectRepository) {
+  public ProjectService(
+      ProjectRepository projectRepository, ProjectFileDeletionService projectFileDeletionService) {
     this.projectRepository = projectRepository;
+    this.projectFileDeletionService = projectFileDeletionService;
   }
 
   @Transactional
@@ -48,6 +52,7 @@ public class ProjectService {
   @Transactional
   public void deleteProject(String projectId) {
     Project project = getProjectByPublicId(projectId);
+    projectFileDeletionService.deleteProjectFiles(project);
     projectRepository.delete(project);
   }
 

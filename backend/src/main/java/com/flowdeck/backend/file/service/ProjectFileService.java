@@ -12,7 +12,6 @@ import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
-import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,15 +24,15 @@ public class ProjectFileService {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
-  private final FileVersionRepository fileVersionRepository;
+  private final ProjectFileDeletionService projectFileDeletionService;
 
   public ProjectFileService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
-      FileVersionRepository fileVersionRepository) {
+      ProjectFileDeletionService projectFileDeletionService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
-    this.fileVersionRepository = fileVersionRepository;
+    this.projectFileDeletionService = projectFileDeletionService;
   }
 
   @Transactional
@@ -134,7 +133,7 @@ public class ProjectFileService {
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 
-    deleteRecursive(file);
+    projectFileDeletionService.deleteRecursive(file);
   }
 
   private Project getProject(String projectId) {
@@ -189,18 +188,5 @@ public class ProjectFileService {
       }
       current = current.getParent();
     }
-  }
-
-  private void deleteRecursive(ProjectFile file) {
-    List<ProjectFile> children = projectFileRepository.findAllByParent(file);
-    for (ProjectFile child : children) {
-      deleteRecursive(child);
-    }
-
-    if (file.isFile()) {
-      fileVersionRepository.deleteAllByFile(file);
-    }
-
-    projectFileRepository.delete(file);
   }
 }
