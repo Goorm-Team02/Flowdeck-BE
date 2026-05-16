@@ -10,7 +10,8 @@
 - `docs/*`: 문서 수정용 브랜치
 
 중요한 점은 브랜치 이름이 `develop/feature/*`가 아니라는 것.
-정확한 흐름은 `develop`에서 `feature/*`, `fix/*`, `refactor/*`, `docs/*` 브랜치를 따서 작업한 뒤, pull request로 다시 `develop`에 합치는 방식
+기본 흐름은 `develop`에서 `feature/*`, `fix/*`, `refactor/*`, `docs/*` 브랜치를 따서 작업한 뒤, pull request로 다시 `develop`에 합치는 방식
+스택형 작업이 필요하면 부모 브랜치에서 자식 브랜치를 파생해 `feature/project-file-search -> feature/project-file`처럼 같은 type 안에서 부모 브랜치로 먼저 merge 할 수 있음
 
 ## 2. 브랜치 이름 규칙
 
@@ -44,6 +45,13 @@
 6. 리뷰 후 `develop`에 merge 합니다.
 7. 배포나 제출 시점에는 `develop`에서 `main`으로 pull request를 생성합니다.
 
+스택형 브랜치 예시:
+
+1. `develop`에서 `feature/project-file` 생성
+2. `feature/project-file`에서 `feature/project-file-search` 생성
+3. `feature/project-file-search` PR의 base는 `feature/project-file`
+4. 부모 브랜치 정리 후 `feature/project-file`을 `develop`으로 merge
+
 예시 명령:
 
 ```bash
@@ -62,7 +70,7 @@ cd backend
 ## 4. 저장소에서 강제하는 규칙
 
 - `.githooks/pre-push`: `main`, `develop` 직접 push를 막고 브랜치 이름 형식 검사
-- `.github/workflows/branch-policy.yml`: pull request의 source/base 브랜치 조합 검사
+- `.github/workflows/branch-policy.yml`: pull request의 source/base 브랜치 조합 검사 (`develop <- work branch`, `main <- develop`, `parent work branch <- child work branch`)
 - `.github/workflows/commit-message.yml`: pull request 범위의 커밋 메시지 형식 검사
 
 ## 5. GitHub 설정 

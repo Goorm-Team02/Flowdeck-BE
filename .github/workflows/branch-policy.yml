@@ -31,13 +31,33 @@ jobs:
             exit 0
           fi
 
-          if [[ "$BASE_REF" != "develop" ]]; then
-            echo "::error::Pull requests must target develop. Only release PRs from develop may target main."
-            exit 1
-          fi
-
           if ! [[ "$HEAD_REF" =~ $branch_pattern ]]; then
             echo "::error::Invalid branch name: $HEAD_REF"
             echo "::error::Use feature/*, fix/*, refactor/*, or docs/* with lowercase kebab-case names."
+            exit 1
+          fi
+
+          if [[ "$BASE_REF" == "develop" ]]; then
+            exit 0
+          fi
+
+          if ! [[ "$BASE_REF" =~ $branch_pattern ]]; then
+            echo "::error::Pull requests must target develop or a parent work branch. Only release PRs from develop may target main."
+            exit 1
+          fi
+
+          head_type="${HEAD_REF%%/*}"
+          base_type="${BASE_REF%%/*}"
+          head_name="${HEAD_REF#*/}"
+          base_name="${BASE_REF#*/}"
+
+          if [[ "$head_type" != "$base_type" ]]; then
+            echo "::error::Stacked pull requests must use the same branch type for source and target."
+            exit 1
+          fi
+
+          if [[ "$head_name" != "$base_name"-* ]]; then
+            echo "::error::Stacked pull requests must target a parent branch whose name is a prefix of the source branch."
+            echo "::error::Example: feature/project-file-search -> feature/project-file"
             exit 1
           fi
