@@ -57,6 +57,13 @@ public class ProjectMemberController {
             projectId, authentication.getUserId(), memberId, request));
   }
 
+  @DeleteMapping("/me")
+  public ApiResponse<Void> leaveProject(
+      @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication authentication) {
+    projectMemberService.leaveProject(projectId, authentication.getUserId());
+    return ApiResponse.success("프로젝트에서 나갔습니다.", null);
+  }
+
   @DeleteMapping("/{memberId}")
   public ApiResponse<Void> removeMember(
       @PathVariable String projectId,
@@ -64,12 +71,5 @@ public class ProjectMemberController {
       @AuthenticationPrincipal JwtAuthentication authentication) {
     projectMemberService.removeMember(projectId, authentication.getUserId(), memberId);
     return ApiResponse.success("멤버가 제거되었습니다.", null);
-  }
-
-  @DeleteMapping("/me")
-  public ApiResponse<Void> leaveProject(
-      @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication authentication) {
-    projectMemberService.leaveProject(projectId, authentication.getUserId());
-    return ApiResponse.success("프로젝트에서 나갔습니다.", null);
   }
 }
