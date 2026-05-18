@@ -26,7 +26,7 @@ app:
     jwt:
       secret: ${JWT_SECRET:flowdeck-local-jwt-secret-key-change-me-now-123456}
       access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
-
+      refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}
 ---
 spring:
   config:
