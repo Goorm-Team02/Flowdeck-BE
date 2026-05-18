@@ -1,5 +1,6 @@
 package com.flowdeck.backend.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,13 +13,21 @@ import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.domain.ProjectVisibility;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.projectmessage.domain.ProjectMessage;
+import com.flowdeck.backend.projectmessage.dto.ProjectMessageEventResponse;
+import com.flowdeck.backend.projectmessage.dto.ProjectMessageEventType;
+import com.flowdeck.backend.projectmessage.realtime.ProjectMessageBroadcaster;
 import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
 import com.flowdeck.testsupport.DatabaseIntegrationTest;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,12 +35,14 @@ import org.springframework.test.web.servlet.MockMvc;
 @DatabaseIntegrationTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "app.jpa.auditing.enabled=true")
+@Import(ProjectMessageControllerIntegrationTest.TestPublisherConfig.class)
 class ProjectMessageControllerIntegrationTest {
 
   private final MockMvc mockMvc;
   private final JwtTokenProvider jwtTokenProvider;
   private final ProjectRepository projectRepository;
   private final ProjectMessageRepository projectMessageRepository;
+  private final TestProjectMessageBroadcaster projectMessageBroadcaster;
 
   private Project project;
 
@@ -40,17 +51,20 @@ class ProjectMessageControllerIntegrationTest {
       MockMvc mockMvc,
       JwtTokenProvider jwtTokenProvider,
       ProjectRepository projectRepository,
-      ProjectMessageRepository projectMessageRepository) {
+      ProjectMessageRepository projectMessageRepository,
+      TestProjectMessageBroadcaster projectMessageBroadcaster) {
     this.mockMvc = mockMvc;
     this.jwtTokenProvider = jwtTokenProvider;
     this.projectRepository = projectRepository;
     this.projectMessageRepository = projectMessageRepository;
+    this.projectMessageBroadcaster = projectMessageBroadcaster;
   }
 
   @BeforeEach
   void setUp() {
     projectMessageRepository.deleteAll();
     projectRepository.deleteAll();
+    projectMessageBroadcaster.reset();
 
     project =
         projectRepository.save(new Project("Flowdeck", "프로젝트 메시지 테스트", ProjectVisibility.PUBLIC));
@@ -70,6 +84,14 @@ class ProjectMessageControllerIntegrationTest {
         .andExpect(jsonPath("$.data.userId").value(1))
         .andExpect(jsonPath("$.data.messageType").value("CHAT"))
         .andExpect(jsonPath("$.data.content").value("첫 메시지"));
+
+    assertThat(projectMessageBroadcaster.events()).hasSize(1);
+    assertThat(projectMessageBroadcaster.events().getFirst().projectId())
+        .isEqualTo(project.getPublicId());
+    assertThat(projectMessageBroadcaster.events().getFirst().event().eventType())
+        .isEqualTo(ProjectMessageEventType.CREATED);
+    assertThat(projectMessageBroadcaster.events().getFirst().event().message().content())
+        .isEqualTo("첫 메시지");
   }
 
   @Test
@@ -128,6 +150,12 @@ class ProjectMessageControllerIntegrationTest {
                 .header(AUTHORIZATION, bearerToken(1L)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("메시지가 삭제되었습니다."));
+
+    assertThat(projectMessageBroadcaster.events()).hasSize(1);
+    assertThat(projectMessageBroadcaster.events().getFirst().event().eventType())
+        .isEqualTo(ProjectMessageEventType.DELETED);
+    assertThat(projectMessageBroadcaster.events().getFirst().event().messageId())
+        .isEqualTo(message.getId());
   }
 
   private String bearerToken(Long userId) {
@@ -135,4 +163,40 @@ class ProjectMessageControllerIntegrationTest {
         + jwtTokenProvider.createAccessToken(
             userId, "tester" + userId + "@flowdeck.com", List.of("ROLE_USER"));
   }
+
+  @TestConfiguration
+  static class TestPublisherConfig {
+
+    @Bean
+    @Primary
+    TestProjectMessageBroadcaster projectMessageBroadcaster() {
+      return new TestProjectMessageBroadcaster();
+    }
+  }
+
+  static class TestProjectMessageBroadcaster implements ProjectMessageBroadcaster {
+
+    private final List<PublishedEvent> events = new ArrayList<>();
+
+    @Override
+    public void broadcastCreated(
+        String projectId, com.flowdeck.backend.projectmessage.dto.ProjectMessageResponse message) {
+      events.add(new PublishedEvent(projectId, createdEvent(message)));
+    }
+
+    @Override
+    public void broadcastDeleted(String projectId, Long messageId) {
+      events.add(new PublishedEvent(projectId, deletedEvent(messageId)));
+    }
+
+    List<PublishedEvent> events() {
+      return events;
+    }
+
+    void reset() {
+      events.clear();
+    }
+  }
+
+  record PublishedEvent(String projectId, ProjectMessageEventResponse event) {}
 }

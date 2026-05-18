@@ -2,11 +2,13 @@ package com.flowdeck.backend.projectmessage.service;
 
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.projectmessage.domain.ProjectMessage;
 import com.flowdeck.backend.projectmessage.dto.ProjectMessageCreateRequest;
 import com.flowdeck.backend.projectmessage.dto.ProjectMessageResponse;
+import com.flowdeck.backend.projectmessage.realtime.ProjectMessageBroadcaster;
 import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -18,11 +20,18 @@ public class ProjectMessageService {
 
   private final ProjectRepository projectRepository;
   private final ProjectMessageRepository projectMessageRepository;
+  private final ProjectMessageBroadcaster projectMessageBroadcaster;
+  private final AfterCommitExecutor afterCommitExecutor;
 
   public ProjectMessageService(
-      ProjectRepository projectRepository, ProjectMessageRepository projectMessageRepository) {
+      ProjectRepository projectRepository,
+      ProjectMessageRepository projectMessageRepository,
+      ProjectMessageBroadcaster projectMessageBroadcaster,
+      AfterCommitExecutor afterCommitExecutor) {
     this.projectRepository = projectRepository;
     this.projectMessageRepository = projectMessageRepository;
+    this.projectMessageBroadcaster = projectMessageBroadcaster;
+    this.afterCommitExecutor = afterCommitExecutor;
   }
 
   @Transactional(readOnly = true)
@@ -39,8 +48,10 @@ public class ProjectMessageService {
       String projectId, Long userId, ProjectMessageCreateRequest request) {
     Project project = getProjectByPublicId(projectId);
     ProjectMessage message = ProjectMessage.chat(project, userId, request.content().trim());
-
-    return ProjectMessageResponse.from(projectMessageRepository.save(message));
+    ProjectMessageResponse response =
+        ProjectMessageResponse.from(projectMessageRepository.save(message));
+    afterCommitExecutor.run(() -> projectMessageBroadcaster.broadcastCreated(projectId, response));
+    return response;
   }
 
   @Transactional(readOnly = true)
@@ -72,6 +83,7 @@ public class ProjectMessageService {
     }
 
     projectMessageRepository.delete(message);
+    afterCommitExecutor.run(() -> projectMessageBroadcaster.broadcastDeleted(projectId, messageId));
   }
 
   private Project getProjectByPublicId(String projectId) {
