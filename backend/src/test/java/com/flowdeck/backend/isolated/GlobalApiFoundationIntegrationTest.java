@@ -49,7 +49,7 @@ class GlobalApiFoundationIntegrationTest {
   @Test
   void publicEndpointReturnsCommonSuccessResponse() throws Exception {
     mockMvc
-        .perform(get("/api/auth/ping"))
+        .perform(get("/api/auth/login"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.code").value("SUCCESS"))
@@ -60,7 +60,7 @@ class GlobalApiFoundationIntegrationTest {
   @Test
   void businessExceptionIsHandledByRestControllerAdvice() throws Exception {
     mockMvc
-        .perform(get("/api/auth/business-error"))
+        .perform(get("/api/auth/signup"))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("COMMON_404"))
@@ -70,10 +70,7 @@ class GlobalApiFoundationIntegrationTest {
   @Test
   void validationExceptionIsHandledWithCommonErrorResponse() throws Exception {
     mockMvc
-        .perform(
-            post("/api/auth/validation-error")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+        .perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{}"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("COMMON_400"))
@@ -149,17 +146,17 @@ class GlobalApiFoundationIntegrationTest {
   @RestController
   static class TestSupportController {
 
-    @GetMapping("/api/auth/ping")
+    @GetMapping("/api/auth/login")
     ApiResponse<String> publicPing() {
       return ApiResponse.success("pong");
     }
 
-    @GetMapping("/api/auth/business-error")
+    @GetMapping("/api/auth/signup")
     ApiResponse<Void> businessError() {
       throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
     }
 
-    @PostMapping("/api/auth/validation-error")
+    @PostMapping("/api/auth/refresh")
     ApiResponse<Map<String, String>> validationError(
         @Valid @RequestBody ValidationRequest request) {
       return ApiResponse.success(Map.of("name", request.getName()));

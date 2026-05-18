@@ -1,5 +1,6 @@
 package com.flowdeck.testsupport;
 
+import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.global.config.CorsConfig;
 import com.flowdeck.backend.global.config.CorsProperties;
 import com.flowdeck.backend.global.config.SwaggerConfig;
@@ -11,9 +12,11 @@ import com.flowdeck.backend.global.security.jwt.JwtAuthenticationFilter;
 import com.flowdeck.backend.global.security.jwt.JwtConfig;
 import com.flowdeck.backend.global.security.jwt.JwtProperties;
 import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
+import java.time.Duration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
 /** 데이터베이스와 JPA를 제외하고 웹, 보안, 문서화 관련 빈만 로딩하는 격리 테스트 애플리케이션이다. */
@@ -41,5 +44,45 @@ public class IsolatedTestApplication {
 
   protected IsolatedTestApplication() {
     super();
+  }
+
+  @Bean
+  AuthTokenService authTokenService() {
+    return new AuthTokenService(null) {
+      @Override
+      public void saveRefreshToken(Long userId, String refreshToken, Duration ttl) {
+        // Isolated tests do not verify Redis token storage.
+      }
+
+      @Override
+      public boolean matchesRefreshToken(Long userId, String refreshToken) {
+        return true;
+      }
+
+      @Override
+      public void deleteRefreshToken(Long userId) {
+        // Isolated tests do not verify Redis token storage.
+      }
+
+      @Override
+      public void blacklistAccessToken(String accessToken, Duration ttl) {
+        // Isolated tests do not verify Redis token storage.
+      }
+
+      @Override
+      public boolean isBlacklisted(String accessToken) {
+        return false;
+      }
+
+      @Override
+      public void forceLogout(Long userId, Duration ttl) {
+        // Isolated tests do not verify Redis token storage.
+      }
+
+      @Override
+      public boolean isForceLogout(Long userId) {
+        return false;
+      }
+    };
   }
 }
