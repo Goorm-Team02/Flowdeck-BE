@@ -16,4 +16,4 @@ spring:
 app:
   jpa:
     auditing:
-      enabled: false
+      enabled: true

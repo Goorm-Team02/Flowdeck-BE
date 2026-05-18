@@ -1,0 +1,157 @@
+package com.flowdeck.backend.version.service;
+
+import com.flowdeck.backend.file.domain.ProjectFile;
+import com.flowdeck.backend.file.repository.ProjectFileRepository;
+import com.flowdeck.backend.global.error.BusinessException;
+import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.project.domain.Project;
+import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.version.domain.FileVersion;
+import com.flowdeck.backend.version.dto.DiffLineResponse;
+import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
+import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
+import com.flowdeck.backend.version.dto.FileVersionListResponse;
+import com.flowdeck.backend.version.dto.FileVersionResponse;
+import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
+import com.flowdeck.backend.version.repository.FileVersionRepository;
+import java.util.ArrayList;
+import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class FileVersionService {
+
+  private final ProjectRepository projectRepository;
+  private final ProjectFileRepository projectFileRepository;
+  private final FileVersionRepository fileVersionRepository;
+
+  public FileVersionService(
+      ProjectRepository projectRepository,
+      ProjectFileRepository projectFileRepository,
+      FileVersionRepository fileVersionRepository) {
+    this.projectRepository = projectRepository;
+    this.projectFileRepository = projectFileRepository;
+    this.fileVersionRepository = fileVersionRepository;
+  }
+
+  @Transactional(readOnly = true)
+  public FileVersionListResponse getVersions(String projectId, Long fileId) {
+    ProjectFile file = getProjectFile(projectId, fileId);
+
+    List<FileVersionResponse> versions =
+        fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file).stream()
+            .map(FileVersionResponse::from)
+            .toList();
+
+    return FileVersionListResponse.from(versions);
+  }
+
+  @Transactional(readOnly = true)
+  public FileVersionDetailResponse getVersion(String projectId, Long fileId, Long versionId) {
+    ProjectFile file = getProjectFile(projectId, fileId);
+    FileVersion version = getFileVersion(file, versionId);
+
+    return FileVersionDetailResponse.from(version);
+  }
+
+  @Transactional
+  public FileVersionRestoreResponse restoreVersion(String projectId, Long fileId, Long versionId) {
+    ProjectFile file = getProjectFile(projectId, fileId);
+    FileVersion version = getFileVersion(file, versionId);
+
+    if (!file.isFile()) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    file.increaseVersion();
+
+    FileVersion restoredVersion =
+        new FileVersion(
+            file,
+            version.getUserId(),
+            file.getCurrentVersion(),
+            version.getContent(),
+            "버전 " + version.getVersionNumber() + " 복원");
+
+    fileVersionRepository.save(restoredVersion);
+
+    return FileVersionRestoreResponse.from(file);
+  }
+
+  @Transactional(readOnly = true)
+  public FileVersionDiffResponse getDiff(
+      String projectId, Long fileId, int fromVersion, int toVersion) {
+    ProjectFile file = getProjectFile(projectId, fileId);
+
+    FileVersion from =
+        fileVersionRepository
+            .findByFileAndVersionNumber(file, fromVersion)
+            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+    FileVersion to =
+        fileVersionRepository
+            .findByFileAndVersionNumber(file, toVersion)
+            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+    List<DiffLineResponse> changes = createSimpleDiff(from.getContent(), to.getContent());
+    int addedLines = countType(changes, "ADDED");
+    int removedLines = countType(changes, "REMOVED");
+
+    return new FileVersionDiffResponse(
+        from.getVersionNumber(), to.getVersionNumber(), addedLines, removedLines, changes);
+  }
+
+  private ProjectFile getProjectFile(String projectId, Long fileId) {
+    Project project =
+        projectRepository
+            .findByPublicId(projectId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+    ProjectFile file =
+        projectFileRepository
+            .findByIdAndProject(fileId, project)
+            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+    if (!file.isFile()) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    return file;
+  }
+
+  private FileVersion getFileVersion(ProjectFile file, Long versionId) {
+    return fileVersionRepository
+        .findByFileAndId(file, versionId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+  }
+
+  private List<DiffLineResponse> createSimpleDiff(String oldContent, String newContent) {
+    String[] oldLines = oldContent.split("\\R", -1);
+    String[] newLines = newContent.split("\\R", -1);
+
+    int maxLength = Math.max(oldLines.length, newLines.length);
+    List<DiffLineResponse> changes = new ArrayList<>();
+
+    for (int index = 0; index < maxLength; index++) {
+      String oldLine = index < oldLines.length ? oldLines[index] : null;
+      String newLine = index < newLines.length ? newLines[index] : null;
+
+      if (oldLine == null) {
+        changes.add(new DiffLineResponse("ADDED", null, index + 1, newLine));
+      } else if (newLine == null) {
+        changes.add(new DiffLineResponse("REMOVED", index + 1, null, oldLine));
+      } else if (oldLine.equals(newLine)) {
+        changes.add(new DiffLineResponse("UNCHANGED", index + 1, index + 1, newLine));
+      } else {
+        changes.add(new DiffLineResponse("REMOVED", index + 1, null, oldLine));
+        changes.add(new DiffLineResponse("ADDED", null, index + 1, newLine));
+      }
+    }
+
+    return changes;
+  }
+
+  private int countType(List<DiffLineResponse> changes, String type) {
+    return (int) changes.stream().filter(change -> type.equals(change.type())).count();
+  }
+}
