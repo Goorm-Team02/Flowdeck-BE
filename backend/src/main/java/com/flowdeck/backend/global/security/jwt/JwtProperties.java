@@ -7,6 +7,7 @@ public class JwtProperties {
 
   private String secret = "";
   private long accessTokenExpirationSeconds;
+  private long refreshTokenExpirationSeconds;
 
   public String getSecret() {
     return secret;
@@ -22,5 +23,13 @@ public class JwtProperties {
 
   public void setAccessTokenExpirationSeconds(long accessTokenExpirationSeconds) {
     this.accessTokenExpirationSeconds = accessTokenExpirationSeconds;
+  }
+
+  public long getRefreshTokenExpirationSeconds() {
+    return refreshTokenExpirationSeconds;
+  }
+
+  public void setRefreshTokenExpirationSeconds(long refreshTokenExpirationSeconds) {
+    this.refreshTokenExpirationSeconds = refreshTokenExpirationSeconds;
   }
 }
