@@ -4,6 +4,7 @@ import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
@@ -19,18 +20,24 @@ public class FileSaveService {
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
   private final FileVersionRepository fileVersionRepository;
+  private final PermissionService permissionService;
 
   public FileSaveService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
-      FileVersionRepository fileVersionRepository) {
+      FileVersionRepository fileVersionRepository,
+      PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.fileVersionRepository = fileVersionRepository;
+    this.permissionService = permissionService;
   }
 
   @Transactional
-  public FileSaveResponse saveFile(String projectId, Long fileId, FileSaveRequest request) {
+  public FileSaveResponse saveFile(
+      String projectId, Long userId, Long fileId, FileSaveRequest request) {
+    permissionService.validateEditor(projectId, userId);
+
     Project project =
         projectRepository
             .findByPublicId(projectId)
@@ -49,7 +56,11 @@ public class FileSaveService {
 
     FileVersion version =
         new FileVersion(
-            file, null, file.getCurrentVersion(), request.getContent(), request.getChangeMessage());
+            file,
+            userId,
+            file.getCurrentVersion(),
+            request.getContent(),
+            request.getChangeMessage());
     fileVersionRepository.save(version);
 
     return FileSaveResponse.from(file);
