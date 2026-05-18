@@ -36,6 +36,16 @@ public class ProjectController {
         "프로젝트가 생성되었습니다.", projectService.createProject(request, authentication.getUserId()));
   }
 
+  @GetMapping("/public")
+  public ApiResponse<ProjectListResponse> getPublicProjects() {
+    return ApiResponse.success(projectService.getPublicProjects());
+  }
+
+  @GetMapping("/public/{projectId}")
+  public ApiResponse<ProjectResponse> getPublicProject(@PathVariable String projectId) {
+    return ApiResponse.success(projectService.getPublicProject(projectId));
+  }
+
   @GetMapping("/{projectId}")
   public ApiResponse<ProjectResponse> getProject(
       @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication authentication) {
@@ -57,15 +67,5 @@ public class ProjectController {
       @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication authentication) {
     projectService.deleteProject(projectId, authentication.getUserId());
     return ApiResponse.success("프로젝트가 삭제되었습니다.", null);
-  }
-
-  @GetMapping("/public")
-  public ApiResponse<ProjectListResponse> getPublicProjects() {
-    return ApiResponse.success(projectService.getPublicProjects());
-  }
-
-  @GetMapping("/public/{projectId}")
-  public ApiResponse<ProjectResponse> getPublicProject(@PathVariable String projectId) {
-    return ApiResponse.success(projectService.getPublicProject(projectId));
   }
 }
