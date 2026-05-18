@@ -67,3 +67,20 @@ cd backend
 - `check`: 포맷, 스타일, 구조 규칙, 테스트를 한 번에 검사합니다.
 
 커밋 전에 포맷이 바뀌었을 수 있으면 `spotlessApply`를 먼저 실행합니다. `check`는 CI가 pull request와 보호 브랜치에서 실행하는 것과 같은 검증입니다.
+
+
+## Redis Key Convention
+
+Redis는 영구 데이터 저장소가 아니라 토큰, 접속 상태, 임시 상태, 캐시 용도로만 사용합니다.
+프로젝트, 파일, 버전, 채팅 원본 데이터는 PostgreSQL에 저장합니다.
+
+Key는 도메인 prefix를 포함합니다.
+
+- `auth:refresh:{userId}`: Refresh Token 저장 (백엔드1)
+- `auth:blacklist:{token}`: 로그아웃된 Access Token 차단 (백엔드1)
+- `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 강제 로그아웃 플래그 (백엔드1)
+- `presence:project:{projectId}`: 프로젝트 접속자 상태 (백엔드3)
+- `ws:session:{sessionId}`: WebSocket 세션 보조 (백엔드3)
+- `run:result:{runId}`: 코드 실행 결과 임시 저장 (Could 기능)
+
+TTL이 필요한 key는 반드시 만료 시간을 설정합니다.
