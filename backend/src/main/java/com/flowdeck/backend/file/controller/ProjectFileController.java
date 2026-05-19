@@ -1,6 +1,7 @@
 package com.flowdeck.backend.file.controller;
 
 import com.flowdeck.backend.file.dto.ProjectFileCreateRequest;
+import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
 import com.flowdeck.backend.file.dto.ProjectFileMoveRequest;
 import com.flowdeck.backend.file.dto.ProjectFileRenameRequest;
 import com.flowdeck.backend.file.dto.ProjectFileResponse;
@@ -66,7 +67,7 @@ public class ProjectFileController {
   }
 
   @GetMapping("/{fileId}")
-  public ApiResponse<ProjectFileResponse> getFile(
+  public ApiResponse<ProjectFileDetailResponse> getFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
       @PathVariable Long fileId) {

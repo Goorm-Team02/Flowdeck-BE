@@ -2,6 +2,7 @@ package com.flowdeck.backend.file.service;
 
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.dto.ProjectFileCreateRequest;
+import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
 import com.flowdeck.backend.file.dto.ProjectFileMoveRequest;
 import com.flowdeck.backend.file.dto.ProjectFileRenameRequest;
 import com.flowdeck.backend.file.dto.ProjectFileResponse;
@@ -13,6 +14,7 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,16 +29,19 @@ public class ProjectFileService {
   private final ProjectFileRepository projectFileRepository;
   private final ProjectFileDeletionService projectFileDeletionService;
   private final PermissionService permissionService;
+  private final FileVersionRepository fileVersionRepository;
 
   public ProjectFileService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       ProjectFileDeletionService projectFileDeletionService,
-      PermissionService permissionService) {
+      PermissionService permissionService,
+      FileVersionRepository fileVersionRepository) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.projectFileDeletionService = projectFileDeletionService;
     this.permissionService = permissionService;
+    this.fileVersionRepository = fileVersionRepository;
   }
 
   @Transactional
@@ -88,13 +93,23 @@ public class ProjectFileService {
   }
 
   @Transactional(readOnly = true)
-  public ProjectFileResponse getFile(String projectId, Long userId, Long fileId) {
+  public ProjectFileDetailResponse getFile(String projectId, Long userId, Long fileId) {
     permissionService.validateProjectAccess(projectId, userId);
 
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 
-    return ProjectFileResponse.from(file);
+    if (!file.isFile()) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    String content =
+        fileVersionRepository
+            .findTopByFileOrderByVersionNumberDesc(file)
+            .map(version -> version.getContent())
+            .orElse("");
+
+    return ProjectFileDetailResponse.from(file, content);
   }
 
   @Transactional(readOnly = true)
