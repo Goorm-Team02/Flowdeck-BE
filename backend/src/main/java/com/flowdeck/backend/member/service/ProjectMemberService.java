@@ -13,6 +13,7 @@ import com.flowdeck.backend.member.repository.ProjectMemberRepository;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.projectmessage.service.ProjectMessageService;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import java.time.Duration;
@@ -30,18 +31,21 @@ public class ProjectMemberService {
   private final ProjectMemberRepository projectMemberRepository;
   private final PermissionService permissionService;
   private final AuthTokenService authTokenService;
+  private final ProjectMessageService projectMessageService;
 
   public ProjectMemberService(
       ProjectRepository projectRepository,
       UserRepository userRepository,
       ProjectMemberRepository projectMemberRepository,
       PermissionService permissionService,
-      AuthTokenService authTokenService) {
+      AuthTokenService authTokenService,
+      ProjectMessageService projectMessageService) {
     this.projectRepository = projectRepository;
     this.userRepository = userRepository;
     this.projectMemberRepository = projectMemberRepository;
     this.permissionService = permissionService;
     this.authTokenService = authTokenService;
+    this.projectMessageService = projectMessageService;
   }
 
   @Transactional(readOnly = true)
@@ -74,6 +78,16 @@ public class ProjectMemberService {
 
     ProjectMember member = new ProjectMember(project, user, request.getRole());
     ProjectMember savedMember = projectMemberRepository.save(member);
+    User requester = getUser(requesterId);
+    projectMessageService.createLogMessage(
+        projectId,
+        requesterId,
+        requester.getName()
+            + "님이 "
+            + user.getName()
+            + "님을 "
+            + request.getRole()
+            + " 권한으로 초대했습니다.");
 
     return MemberResponse.from(savedMember);
   }
@@ -85,6 +99,8 @@ public class ProjectMemberService {
 
     Project project = getProject(projectId);
     ProjectMember member = getMember(project, memberId);
+    User requester = getUser(requesterId);
+    ProjectRole previousRole = member.getRole();
 
     if (member.isOwner() && request.getRole() != ProjectRole.OWNER && isLastOwner(project)) {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -92,6 +108,17 @@ public class ProjectMemberService {
 
     member.updateRole(request.getRole());
     authTokenService.forceLogout(member.getUser().getId(), FORCE_LOGOUT_TTL);
+    projectMessageService.createLogMessage(
+        projectId,
+        requesterId,
+        requester.getName()
+            + "님이 "
+            + member.getUser().getName()
+            + "님의 권한을 "
+            + previousRole
+            + "에서 "
+            + request.getRole()
+            + "(으)로 변경했습니다.");
 
     return MemberResponse.from(member);
   }
@@ -102,6 +129,7 @@ public class ProjectMemberService {
 
     Project project = getProject(projectId);
     ProjectMember member = getMember(project, memberId);
+    User requester = getUser(requesterId);
 
     if (member.isOwner() && isLastOwner(project)) {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -109,6 +137,10 @@ public class ProjectMemberService {
 
     projectMemberRepository.delete(member);
     authTokenService.forceLogout(member.getUser().getId(), FORCE_LOGOUT_TTL);
+    projectMessageService.createLogMessage(
+        projectId,
+        requesterId,
+        requester.getName() + "님이 " + member.getUser().getName() + "님을 프로젝트에서 제거했습니다.");
   }
 
   @Transactional
@@ -122,6 +154,8 @@ public class ProjectMemberService {
 
     projectMemberRepository.delete(member);
     authTokenService.forceLogout(userId, FORCE_LOGOUT_TTL);
+    projectMessageService.createLogMessage(
+        projectId, userId, member.getUser().getName() + "님이 프로젝트에서 나갔습니다.");
   }
 
   private boolean isLastOwner(Project project) {
@@ -132,6 +166,12 @@ public class ProjectMemberService {
     return projectRepository
         .findByPublicId(projectId)
         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+  }
+
+  private User getUser(Long userId) {
+    return userRepository
+        .findById(userId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
   }
 
   private ProjectMember getMember(Project project, Long memberId) {

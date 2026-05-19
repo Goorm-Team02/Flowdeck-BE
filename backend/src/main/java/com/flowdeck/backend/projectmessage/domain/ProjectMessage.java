@@ -55,8 +55,12 @@ public class ProjectMessage extends BaseTimeEntity {
     return new ProjectMessage(project, userId, ProjectMessageType.CHAT, content);
   }
 
+  public static ProjectMessage log(Project project, Long userId, String content) {
+    return new ProjectMessage(project, userId, ProjectMessageType.LOG, content);
+  }
+
   public static ProjectMessage log(Project project, String content) {
-    return new ProjectMessage(project, null, ProjectMessageType.LOG, content);
+    return log(project, null, content);
   }
 
   public boolean isWrittenBy(Long userId) {

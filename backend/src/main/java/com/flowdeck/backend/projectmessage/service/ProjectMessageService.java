@@ -68,6 +68,16 @@ public class ProjectMessageService {
     return response;
   }
 
+  @Transactional
+  public ProjectMessageResponse createLogMessage(String projectId, Long userId, String content) {
+    Project project = getProjectByPublicId(projectId);
+    ProjectMessage message = ProjectMessage.log(project, userId, content.trim());
+    ProjectMessage savedMessage = projectMessageRepository.save(message);
+    ProjectMessageResponse response = toResponse(savedMessage, senderNames(List.of(savedMessage)));
+    afterCommitExecutor.run(() -> projectMessageBroadcaster.broadcastCreated(projectId, response));
+    return response;
+  }
+
   @Transactional(readOnly = true)
   public List<ProjectMessageResponse> searchMessages(
       String projectId, Long userId, String keyword) {
