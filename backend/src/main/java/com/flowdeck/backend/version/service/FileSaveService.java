@@ -9,11 +9,14 @@ import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
+import java.nio.charset.StandardCharsets;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FileSaveService {
+
+  private static final int MAX_FILE_CONTENT_BYTES = 1024 * 1024;
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -51,9 +54,18 @@ public class FileSaveService {
       throw new BusinessException(ErrorCode.FILE_EDIT_CONFLICT);
     }
 
+    validateContentSize(request.getContent());
+
     file.updateContent(request.getContent());
     file.increaseEditRevision();
 
     return FileSaveResponse.from(file);
+  }
+
+  private void validateContentSize(String content) {
+    int contentBytes = content.getBytes(StandardCharsets.UTF_8).length;
+    if (contentBytes > MAX_FILE_CONTENT_BYTES) {
+      throw new BusinessException(ErrorCode.FILE_SIZE_EXCEEDED);
+    }
   }
 }

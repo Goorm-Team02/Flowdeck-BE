@@ -77,6 +77,9 @@ Ctrl+S 또는 일반 저장 시 현재 작업 내용을 저장합니다.
 ### 동작
 
 - `baseRevision`이 현재 파일의 `editRevision`과 같으면 저장합니다.
+- 저장 전 `content` 크기를 UTF-8 byte 기준으로 검증합니다.
+- MVP 기준 단일 파일 최대 크기는 1MB입니다.
+- 제한을 초과하면 `FILE_400_3` 에러를 반환합니다.
 - 저장 성공 시 `currentContent`를 갱신합니다.
 - 저장 성공 시 `editRevision`을 1 증가시킵니다.
 - `currentVersion`은 증가하지 않습니다.
@@ -192,3 +195,4 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 - WebSocket 파일 저장/복원 알림 payload
 - `FileVersion publicId` 도입 여부
 - 운영 DB 마이그레이션 전략
+- 파일 크기 제한값을 운영 설정으로 분리할지 여부

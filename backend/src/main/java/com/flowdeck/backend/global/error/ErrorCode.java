@@ -13,6 +13,7 @@ public enum ErrorCode {
   FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "FILE_400", "파일 타입이 올바르지 않습니다."),
   FILE_INVALID_KEYWORD(HttpStatus.BAD_REQUEST, "FILE_400_1", "검색어가 올바르지 않습니다."),
   FILE_INVALID_MOVE_TARGET(HttpStatus.BAD_REQUEST, "FILE_400_2", "파일을 해당 위치로 이동할 수 없습니다."),
+  FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "FILE_400_3", "파일 크기 제한을 초과했습니다."),
   FILE_EDIT_CONFLICT(HttpStatus.CONFLICT, "FILE_409", "파일이 다른 사용자에 의해 수정되었습니다."),
   FILE_NAME_DUPLICATED(HttpStatus.CONFLICT, "FILE_409_1", "같은 위치에 동일한 이름이 존재합니다."),
   VERSION_NOT_FOUND(HttpStatus.NOT_FOUND, "VERSION_404", "파일 버전을 찾을 수 없습니다."),
