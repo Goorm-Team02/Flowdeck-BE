@@ -4,10 +4,14 @@ import com.flowdeck.backend.file.domain.ProjectFile;
 import java.time.Instant;
 
 public record FileVersionCreateResponse(
-    Long fileId, String name, int currentVersion, Instant updatedAt) {
+    Long fileId, String name, int currentVersion, long editRevision, Instant updatedAt) {
 
   public static FileVersionCreateResponse from(ProjectFile file) {
     return new FileVersionCreateResponse(
-        file.getId(), file.getName(), file.getCurrentVersion(), file.getUpdatedAt());
+        file.getId(),
+        file.getName(),
+        file.getCurrentVersion(),
+        file.getEditRevision(),
+        file.getUpdatedAt());
   }
 }
