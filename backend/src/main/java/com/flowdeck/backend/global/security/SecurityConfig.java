@@ -25,6 +25,8 @@ public class SecurityConfig {
     "/api/auth/signup",
     "/api/auth/login",
     "/api/auth/refresh",
+    "/ws",
+    "/ws/**",
   };
 
   @Bean
