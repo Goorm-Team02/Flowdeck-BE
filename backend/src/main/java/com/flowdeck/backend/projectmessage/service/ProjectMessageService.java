@@ -11,7 +11,12 @@ import com.flowdeck.backend.projectmessage.dto.ProjectMessageCreateRequest;
 import com.flowdeck.backend.projectmessage.dto.ProjectMessageResponse;
 import com.flowdeck.backend.projectmessage.realtime.ProjectMessageBroadcaster;
 import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
+import com.flowdeck.backend.user.repository.UserRepository;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,28 +29,31 @@ public class ProjectMessageService {
   private final ProjectMessageBroadcaster projectMessageBroadcaster;
   private final AfterCommitExecutor afterCommitExecutor;
   private final PermissionService permissionService;
+  private final UserRepository userRepository;
 
   public ProjectMessageService(
       ProjectRepository projectRepository,
       ProjectMessageRepository projectMessageRepository,
       ProjectMessageBroadcaster projectMessageBroadcaster,
       AfterCommitExecutor afterCommitExecutor,
-      PermissionService permissionService) {
+      PermissionService permissionService,
+      UserRepository userRepository) {
     this.projectRepository = projectRepository;
     this.projectMessageRepository = projectMessageRepository;
     this.projectMessageBroadcaster = projectMessageBroadcaster;
     this.afterCommitExecutor = afterCommitExecutor;
     this.permissionService = permissionService;
+    this.userRepository = userRepository;
   }
 
   @Transactional(readOnly = true)
   public List<ProjectMessageResponse> getMessages(String projectId, Long userId) {
     permissionService.validateProjectAccess(projectId, userId);
     Project project = getProjectByPublicId(projectId);
+    List<ProjectMessage> messages =
+        projectMessageRepository.findByProjectIdOrderByCreatedAtAsc(project.getId());
 
-    return projectMessageRepository.findByProjectIdOrderByCreatedAtAsc(project.getId()).stream()
-        .map(ProjectMessageResponse::from)
-        .toList();
+    return toResponses(messages);
   }
 
   @Transactional
@@ -54,8 +62,8 @@ public class ProjectMessageService {
     permissionService.validateEditor(projectId, userId);
     Project project = getProjectByPublicId(projectId);
     ProjectMessage message = ProjectMessage.chat(project, userId, request.content().trim());
-    ProjectMessageResponse response =
-        ProjectMessageResponse.from(projectMessageRepository.save(message));
+    ProjectMessage savedMessage = projectMessageRepository.save(message);
+    ProjectMessageResponse response = toResponse(savedMessage, senderNames(List.of(savedMessage)));
     afterCommitExecutor.run(() -> projectMessageBroadcaster.broadcastCreated(projectId, response));
     return response;
   }
@@ -69,13 +77,11 @@ public class ProjectMessageService {
 
     permissionService.validateProjectAccess(projectId, userId);
     Project project = getProjectByPublicId(projectId);
+    List<ProjectMessage> messages =
+        projectMessageRepository.findByProjectIdAndContentContainingIgnoreCaseOrderByCreatedAtAsc(
+            project.getId(), keyword.trim());
 
-    return projectMessageRepository
-        .findByProjectIdAndContentContainingIgnoreCaseOrderByCreatedAtAsc(
-            project.getId(), keyword.trim())
-        .stream()
-        .map(ProjectMessageResponse::from)
-        .toList();
+    return toResponses(messages);
   }
 
   @Transactional
@@ -99,5 +105,30 @@ public class ProjectMessageService {
     return projectRepository
         .findByPublicId(projectId)
         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+  }
+
+  private List<ProjectMessageResponse> toResponses(List<ProjectMessage> messages) {
+    Map<Long, String> senderNames = senderNames(messages);
+    return messages.stream().map(message -> toResponse(message, senderNames)).toList();
+  }
+
+  private ProjectMessageResponse toResponse(ProjectMessage message, Map<Long, String> senderNames) {
+    return ProjectMessageResponse.from(message, senderNames.get(message.getUserId()));
+  }
+
+  private Map<Long, String> senderNames(Collection<ProjectMessage> messages) {
+    List<Long> userIds =
+        messages.stream()
+            .map(ProjectMessage::getUserId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+
+    if (userIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return userRepository.findAllById(userIds).stream()
+        .collect(Collectors.toMap(user -> user.getId(), user -> user.getName()));
   }
 }

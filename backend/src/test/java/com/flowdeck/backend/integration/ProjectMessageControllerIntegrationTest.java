@@ -110,6 +110,7 @@ class ProjectMessageControllerIntegrationTest {
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.message").value("메시지가 저장되었습니다."))
         .andExpect(jsonPath("$.data.userId").value(owner.getId()))
+        .andExpect(jsonPath("$.data.senderName").value(owner.getName()))
         .andExpect(jsonPath("$.data.messageType").value("CHAT"))
         .andExpect(jsonPath("$.data.content").value("첫 메시지"));
 
@@ -118,6 +119,8 @@ class ProjectMessageControllerIntegrationTest {
         .isEqualTo(project.getPublicId());
     assertThat(projectMessageBroadcaster.events().getFirst().event().eventType())
         .isEqualTo(ProjectMessageEventType.CREATED);
+    assertThat(projectMessageBroadcaster.events().getFirst().event().message().senderName())
+        .isEqualTo(owner.getName());
     assertThat(projectMessageBroadcaster.events().getFirst().event().message().content())
         .isEqualTo("첫 메시지");
   }
@@ -133,8 +136,10 @@ class ProjectMessageControllerIntegrationTest {
                 .header(AUTHORIZATION, bearerToken(viewer.getId())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.messages[0].content").value("첫 번째"))
+        .andExpect(jsonPath("$.data.messages[0].senderName").value(owner.getName()))
         .andExpect(jsonPath("$.data.messages[0].messageType").value("CHAT"))
         .andExpect(jsonPath("$.data.messages[1].content").value("시스템 로그"))
+        .andExpect(jsonPath("$.data.messages[1].senderName").doesNotExist())
         .andExpect(jsonPath("$.data.messages[1].userId").doesNotExist())
         .andExpect(jsonPath("$.data.messages[1].messageType").value("LOG"));
   }
@@ -151,6 +156,7 @@ class ProjectMessageControllerIntegrationTest {
                 .queryParam("keyword", "deploy"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.messages.length()").value(1))
+        .andExpect(jsonPath("$.data.messages[0].senderName").value(owner.getName()))
         .andExpect(jsonPath("$.data.messages[0].content").value("Deploy completed"));
   }
 
