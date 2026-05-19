@@ -10,6 +10,7 @@ import com.flowdeck.backend.file.dto.ProjectFileTreeResponse;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import java.util.ArrayList;
@@ -25,18 +26,24 @@ public class ProjectFileService {
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
   private final ProjectFileDeletionService projectFileDeletionService;
+  private final PermissionService permissionService;
 
   public ProjectFileService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
-      ProjectFileDeletionService projectFileDeletionService) {
+      ProjectFileDeletionService projectFileDeletionService,
+      PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.projectFileDeletionService = projectFileDeletionService;
+    this.permissionService = permissionService;
   }
 
   @Transactional
-  public ProjectFileResponse createFile(String projectId, ProjectFileCreateRequest request) {
+  public ProjectFileResponse createFile(
+      String projectId, Long userId, ProjectFileCreateRequest request) {
+    permissionService.validateEditor(projectId, userId);
+
     Project project = getProject(projectId);
     ProjectFile parent = getParent(project, request.getParentId());
 
@@ -49,7 +56,9 @@ public class ProjectFileService {
   }
 
   @Transactional(readOnly = true)
-  public List<ProjectFileTreeResponse> getFileTree(String projectId) {
+  public List<ProjectFileTreeResponse> getFileTree(String projectId, Long userId) {
+    permissionService.validateProjectAccess(projectId, userId);
+
     Project project = getProject(projectId);
     List<ProjectFile> files =
         projectFileRepository.findAllByProjectOrderByParentIdAscNameAsc(project);
@@ -79,7 +88,9 @@ public class ProjectFileService {
   }
 
   @Transactional(readOnly = true)
-  public ProjectFileResponse getFile(String projectId, Long fileId) {
+  public ProjectFileResponse getFile(String projectId, Long userId, Long fileId) {
+    permissionService.validateProjectAccess(projectId, userId);
+
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 
@@ -87,7 +98,10 @@ public class ProjectFileService {
   }
 
   @Transactional(readOnly = true)
-  public List<ProjectFileSearchResponse> searchFiles(String projectId, String keyword) {
+  public List<ProjectFileSearchResponse> searchFiles(
+      String projectId, Long userId, String keyword) {
+    permissionService.validateProjectAccess(projectId, userId);
+
     if (keyword == null || keyword.isBlank()) {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
@@ -104,7 +118,9 @@ public class ProjectFileService {
 
   @Transactional
   public ProjectFileResponse renameFile(
-      String projectId, Long fileId, ProjectFileRenameRequest request) {
+      String projectId, Long userId, Long fileId, ProjectFileRenameRequest request) {
+    permissionService.validateEditor(projectId, userId);
+
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 
@@ -116,7 +132,9 @@ public class ProjectFileService {
 
   @Transactional
   public ProjectFileResponse moveFile(
-      String projectId, Long fileId, ProjectFileMoveRequest request) {
+      String projectId, Long userId, Long fileId, ProjectFileMoveRequest request) {
+    permissionService.validateEditor(projectId, userId);
+
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
     ProjectFile newParent = getParent(project, request.getParentId());
@@ -129,7 +147,9 @@ public class ProjectFileService {
   }
 
   @Transactional
-  public void deleteFile(String projectId, Long fileId) {
+  public void deleteFile(String projectId, Long userId, Long fileId) {
+    permissionService.validateEditor(projectId, userId);
+
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 

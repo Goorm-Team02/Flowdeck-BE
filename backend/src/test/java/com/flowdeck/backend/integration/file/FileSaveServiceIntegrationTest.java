@@ -1,13 +1,20 @@
 package com.flowdeck.backend.integration.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
+import com.flowdeck.backend.global.error.BusinessException;
+import com.flowdeck.backend.member.domain.ProjectMember;
+import com.flowdeck.backend.member.domain.ProjectRole;
+import com.flowdeck.backend.member.repository.ProjectMemberRepository;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.domain.ProjectVisibility;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.user.domain.User;
+import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
@@ -28,32 +35,46 @@ class FileSaveServiceIntegrationTest {
   private final ProjectFileRepository projectFileRepository;
   private final FileVersionRepository fileVersionRepository;
   private final FileSaveService fileSaveService;
+  private final UserRepository userRepository;
+  private final ProjectMemberRepository projectMemberRepository;
 
   @Autowired
   FileSaveServiceIntegrationTest(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       FileVersionRepository fileVersionRepository,
-      FileSaveService fileSaveService) {
+      FileSaveService fileSaveService,
+      UserRepository userRepository,
+      ProjectMemberRepository projectMemberRepository) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.fileVersionRepository = fileVersionRepository;
     this.fileSaveService = fileSaveService;
+    this.userRepository = userRepository;
+    this.projectMemberRepository = projectMemberRepository;
   }
 
   @Test
   void saveFileCreatesVersionsAndIncreasesCurrentVersion() {
     Project project =
         projectRepository.save(new Project("project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("save-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
     ProjectFile file =
         projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
 
     FileSaveResponse firstResponse =
         fileSaveService.saveFile(
-            project.getPublicId(), file.getId(), createSaveRequest("class Main {}", "first save"));
+            project.getPublicId(),
+            owner.getId(),
+            file.getId(),
+            createSaveRequest("class Main {}", "first save"));
+
     FileSaveResponse secondResponse =
         fileSaveService.saveFile(
             project.getPublicId(),
+            owner.getId(),
             file.getId(),
             createSaveRequest("class Main { void run() {} }", "second save"));
 
@@ -64,8 +85,32 @@ class FileSaveServiceIntegrationTest {
     assertThat(file.getCurrentVersion()).isEqualTo(2);
     assertThat(versions).hasSize(2);
     assertThat(versions).extracting(FileVersion::getVersionNumber).containsExactly(2, 1);
+    assertThat(versions)
+        .extracting(FileVersion::getUserId)
+        .containsExactly(owner.getId(), owner.getId());
     assertThat(versions.get(0).getContent()).isEqualTo("class Main { void run() {} }");
     assertThat(versions.get(1).getContent()).isEqualTo("class Main {}");
+  }
+
+  @Test
+  void viewerCannotSaveFile() {
+    Project project =
+        projectRepository.save(
+            new Project("viewer project", "description", ProjectVisibility.PRIVATE));
+    User viewer = userRepository.save(new User("save-viewer@test.com", "password", "viewer"));
+    projectMemberRepository.save(new ProjectMember(project, viewer, ProjectRole.VIEWER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+
+    assertThatThrownBy(
+            () ->
+                fileSaveService.saveFile(
+                    project.getPublicId(),
+                    viewer.getId(),
+                    file.getId(),
+                    createSaveRequest("class Main {}", "viewer save")))
+        .isInstanceOf(BusinessException.class);
   }
 
   private FileSaveRequest createSaveRequest(String content, String changeMessage) {

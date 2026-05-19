@@ -8,11 +8,13 @@ import com.flowdeck.backend.file.dto.ProjectFileSearchResponse;
 import com.flowdeck.backend.file.dto.ProjectFileTreeResponse;
 import com.flowdeck.backend.file.service.ProjectFileService;
 import com.flowdeck.backend.global.response.ApiResponse;
+import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
 import com.flowdeck.backend.version.service.FileSaveService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -39,58 +41,78 @@ public class ProjectFileController {
 
   @PostMapping
   public ApiResponse<ProjectFileResponse> createFile(
-      @PathVariable String projectId, @Valid @RequestBody ProjectFileCreateRequest request) {
+      @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
+      @Valid @RequestBody ProjectFileCreateRequest request) {
     return ApiResponse.success(
-        "파일 또는 폴더가 생성되었습니다.", projectFileService.createFile(projectId, request));
+        "파일 또는 폴더가 생성되었습니다.",
+        projectFileService.createFile(projectId, authentication.getUserId(), request));
   }
 
   @GetMapping
-  public ApiResponse<List<ProjectFileTreeResponse>> getFileTree(@PathVariable String projectId) {
-    return ApiResponse.success(projectFileService.getFileTree(projectId));
+  public ApiResponse<List<ProjectFileTreeResponse>> getFileTree(
+      @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication authentication) {
+    return ApiResponse.success(
+        projectFileService.getFileTree(projectId, authentication.getUserId()));
   }
 
   @GetMapping("/search")
   public ApiResponse<List<ProjectFileSearchResponse>> searchFiles(
-      @PathVariable String projectId, @RequestParam String keyword) {
-    return ApiResponse.success(projectFileService.searchFiles(projectId, keyword));
+      @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
+      @RequestParam String keyword) {
+    return ApiResponse.success(
+        projectFileService.searchFiles(projectId, authentication.getUserId(), keyword));
   }
 
   @GetMapping("/{fileId}")
   public ApiResponse<ProjectFileResponse> getFile(
-      @PathVariable String projectId, @PathVariable Long fileId) {
-    return ApiResponse.success(projectFileService.getFile(projectId, fileId));
+      @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
+      @PathVariable Long fileId) {
+    return ApiResponse.success(
+        projectFileService.getFile(projectId, authentication.getUserId(), fileId));
   }
 
   @PatchMapping("/{fileId}")
   public ApiResponse<ProjectFileResponse> renameFile(
       @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
       @PathVariable Long fileId,
       @Valid @RequestBody ProjectFileRenameRequest request) {
     return ApiResponse.success(
-        "파일 또는 폴더 이름이 변경되었습니다.", projectFileService.renameFile(projectId, fileId, request));
+        "파일 또는 폴더 이름이 변경되었습니다.",
+        projectFileService.renameFile(projectId, authentication.getUserId(), fileId, request));
   }
 
   @PatchMapping("/{fileId}/move")
   public ApiResponse<ProjectFileResponse> moveFile(
       @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
       @PathVariable Long fileId,
       @RequestBody ProjectFileMoveRequest request) {
     return ApiResponse.success(
-        "파일 또는 폴더 위치가 변경되었습니다.", projectFileService.moveFile(projectId, fileId, request));
+        "파일 또는 폴더 위치가 변경되었습니다.",
+        projectFileService.moveFile(projectId, authentication.getUserId(), fileId, request));
   }
 
   @DeleteMapping("/{fileId}")
-  public ApiResponse<Void> deleteFile(@PathVariable String projectId, @PathVariable Long fileId) {
-    projectFileService.deleteFile(projectId, fileId);
+  public ApiResponse<Void> deleteFile(
+      @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
+      @PathVariable Long fileId) {
+    projectFileService.deleteFile(projectId, authentication.getUserId(), fileId);
     return ApiResponse.success("파일 또는 폴더가 삭제되었습니다.", null);
   }
 
   @PutMapping("/{fileId}")
   public ApiResponse<FileSaveResponse> saveFile(
       @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
       @PathVariable Long fileId,
       @Valid @RequestBody FileSaveRequest request) {
     return ApiResponse.success(
-        "파일이 저장되었습니다.", fileSaveService.saveFile(projectId, fileId, request));
+        "파일이 저장되었습니다.",
+        fileSaveService.saveFile(projectId, authentication.getUserId(), fileId, request));
   }
 }

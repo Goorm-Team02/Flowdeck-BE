@@ -4,6 +4,7 @@ import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
@@ -25,18 +26,23 @@ public class FileVersionService {
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
   private final FileVersionRepository fileVersionRepository;
+  private final PermissionService permissionService;
 
   public FileVersionService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
-      FileVersionRepository fileVersionRepository) {
+      FileVersionRepository fileVersionRepository,
+      PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.fileVersionRepository = fileVersionRepository;
+    this.permissionService = permissionService;
   }
 
   @Transactional(readOnly = true)
-  public FileVersionListResponse getVersions(String projectId, Long fileId) {
+  public FileVersionListResponse getVersions(String projectId, Long userId, Long fileId) {
+    permissionService.validateProjectAccess(projectId, userId);
+
     ProjectFile file = getProjectFile(projectId, fileId);
 
     List<FileVersionResponse> versions =
@@ -48,7 +54,10 @@ public class FileVersionService {
   }
 
   @Transactional(readOnly = true)
-  public FileVersionDetailResponse getVersion(String projectId, Long fileId, Long versionId) {
+  public FileVersionDetailResponse getVersion(
+      String projectId, Long userId, Long fileId, Long versionId) {
+    permissionService.validateProjectAccess(projectId, userId);
+
     ProjectFile file = getProjectFile(projectId, fileId);
     FileVersion version = getFileVersion(file, versionId);
 
@@ -56,7 +65,10 @@ public class FileVersionService {
   }
 
   @Transactional
-  public FileVersionRestoreResponse restoreVersion(String projectId, Long fileId, Long versionId) {
+  public FileVersionRestoreResponse restoreVersion(
+      String projectId, Long userId, Long fileId, Long versionId) {
+    permissionService.validateEditor(projectId, userId);
+
     ProjectFile file = getProjectFile(projectId, fileId);
     FileVersion version = getFileVersion(file, versionId);
 
@@ -69,7 +81,7 @@ public class FileVersionService {
     FileVersion restoredVersion =
         new FileVersion(
             file,
-            version.getUserId(),
+            userId,
             file.getCurrentVersion(),
             version.getContent(),
             "버전 " + version.getVersionNumber() + " 복원");
@@ -81,7 +93,9 @@ public class FileVersionService {
 
   @Transactional(readOnly = true)
   public FileVersionDiffResponse getDiff(
-      String projectId, Long fileId, int fromVersion, int toVersion) {
+      String projectId, Long userId, Long fileId, int fromVersion, int toVersion) {
+    permissionService.validateProjectAccess(projectId, userId);
+
     ProjectFile file = getProjectFile(projectId, fileId);
 
     FileVersion from =
