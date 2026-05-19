@@ -33,9 +33,12 @@ public class ProjectMessageController {
   }
 
   @GetMapping
-  public ApiResponse<ProjectMessageListResponse> getMessages(@PathVariable String projectId) {
+  public ApiResponse<ProjectMessageListResponse> getMessages(
+      @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication principal) {
     return ApiResponse.success(
-        ProjectMessageListResponse.from(projectMessageService.getMessages(projectId)));
+        ProjectMessageListResponse.from(
+            projectMessageService.getMessages(projectId, requireUserId(principal))));
   }
 
   @PostMapping
@@ -51,9 +54,11 @@ public class ProjectMessageController {
   @GetMapping("/search")
   public ApiResponse<ProjectMessageListResponse> searchMessages(
       @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication principal,
       @RequestParam @NotBlank(message = "검색어는 필수입니다.") String keyword) {
     return ApiResponse.success(
-        ProjectMessageListResponse.from(projectMessageService.searchMessages(projectId, keyword)));
+        ProjectMessageListResponse.from(
+            projectMessageService.searchMessages(projectId, requireUserId(principal), keyword)));
   }
 
   @DeleteMapping("/{messageId}")

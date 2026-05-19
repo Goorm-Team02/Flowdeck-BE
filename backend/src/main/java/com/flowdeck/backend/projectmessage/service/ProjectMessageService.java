@@ -3,6 +3,7 @@ package com.flowdeck.backend.projectmessage.service;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
+import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.projectmessage.domain.ProjectMessage;
@@ -22,20 +23,24 @@ public class ProjectMessageService {
   private final ProjectMessageRepository projectMessageRepository;
   private final ProjectMessageBroadcaster projectMessageBroadcaster;
   private final AfterCommitExecutor afterCommitExecutor;
+  private final PermissionService permissionService;
 
   public ProjectMessageService(
       ProjectRepository projectRepository,
       ProjectMessageRepository projectMessageRepository,
       ProjectMessageBroadcaster projectMessageBroadcaster,
-      AfterCommitExecutor afterCommitExecutor) {
+      AfterCommitExecutor afterCommitExecutor,
+      PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectMessageRepository = projectMessageRepository;
     this.projectMessageBroadcaster = projectMessageBroadcaster;
     this.afterCommitExecutor = afterCommitExecutor;
+    this.permissionService = permissionService;
   }
 
   @Transactional(readOnly = true)
-  public List<ProjectMessageResponse> getMessages(String projectId) {
+  public List<ProjectMessageResponse> getMessages(String projectId, Long userId) {
+    permissionService.validateProjectAccess(projectId, userId);
     Project project = getProjectByPublicId(projectId);
 
     return projectMessageRepository.findByProjectIdOrderByCreatedAtAsc(project.getId()).stream()
@@ -46,6 +51,7 @@ public class ProjectMessageService {
   @Transactional
   public ProjectMessageResponse createMessage(
       String projectId, Long userId, ProjectMessageCreateRequest request) {
+    permissionService.validateEditor(projectId, userId);
     Project project = getProjectByPublicId(projectId);
     ProjectMessage message = ProjectMessage.chat(project, userId, request.content().trim());
     ProjectMessageResponse response =
@@ -55,11 +61,13 @@ public class ProjectMessageService {
   }
 
   @Transactional(readOnly = true)
-  public List<ProjectMessageResponse> searchMessages(String projectId, String keyword) {
+  public List<ProjectMessageResponse> searchMessages(
+      String projectId, Long userId, String keyword) {
     if (!StringUtils.hasText(keyword)) {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
 
+    permissionService.validateProjectAccess(projectId, userId);
     Project project = getProjectByPublicId(projectId);
 
     return projectMessageRepository
@@ -72,6 +80,7 @@ public class ProjectMessageService {
 
   @Transactional
   public void deleteMessage(String projectId, Long messageId, Long userId) {
+    permissionService.validateProjectAccess(projectId, userId);
     Project project = getProjectByPublicId(projectId);
     ProjectMessage message =
         projectMessageRepository
