@@ -48,12 +48,16 @@ public class ProjectFile extends BaseTimeEntity {
   @Column(name = "current_content", nullable = false, columnDefinition = "text")
   private String currentContent = "";
 
+  @Column(name = "edit_revision", nullable = false)
+  private long editRevision = 0L;
+
   public ProjectFile(Project project, ProjectFile parent, String name, FileType type) {
     this.project = project;
     this.parent = parent;
     this.name = name;
     this.type = type;
     this.currentVersion = 0;
+    this.editRevision = 0L;
   }
 
   public void rename(String name) {
@@ -66,6 +70,10 @@ public class ProjectFile extends BaseTimeEntity {
 
   public void updateContent(String content) {
     this.currentContent = content;
+  }
+
+  public void increaseEditRevision() {
+    this.editRevision += 1;
   }
 
   public void increaseVersion() {

@@ -8,11 +8,18 @@ public class FileSaveRequest {
   @NotNull(message = "파일 내용은 필수입니다.")
   private String content;
 
+  @NotNull(message = "기준 수정 번호는 필수입니다.")
+  private Long baseRevision;
+
   @Size(max = 255, message = "변경 메시지는 255자 이하여야 합니다.")
   private String changeMessage;
 
   public String getContent() {
     return content;
+  }
+
+  public Long getBaseRevision() {
+    return baseRevision;
   }
 
   public String getChangeMessage() {

@@ -69,22 +69,52 @@ class FileSaveServiceIntegrationTest {
             project.getPublicId(),
             owner.getId(),
             file.getId(),
-            createSaveRequest("class Main {}", "first save"));
+            createSaveRequest("class Main {}", 0L, "first save"));
 
     FileSaveResponse secondResponse =
         fileSaveService.saveFile(
             project.getPublicId(),
             owner.getId(),
             file.getId(),
-            createSaveRequest("class Main { void run() {} }", "second save"));
+            createSaveRequest("class Main { void run() {} }", 1L, "second save"));
 
     List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file);
 
     assertThat(firstResponse.currentVersion()).isZero();
+    assertThat(firstResponse.editRevision()).isEqualTo(1);
     assertThat(secondResponse.currentVersion()).isZero();
+    assertThat(secondResponse.editRevision()).isEqualTo(2);
     assertThat(file.getCurrentVersion()).isZero();
+    assertThat(file.getEditRevision()).isEqualTo(2);
     assertThat(file.getCurrentContent()).isEqualTo("class Main { void run() {} }");
     assertThat(versions).isEmpty();
+  }
+
+  @Test
+  void saveFileFailsWhenBaseRevisionDoesNotMatchCurrentRevision() {
+    Project project =
+        projectRepository.save(
+            new Project("conflict project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("conflict-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+
+    fileSaveService.saveFile(
+        project.getPublicId(),
+        owner.getId(),
+        file.getId(),
+        createSaveRequest("class Main {}", 0L, "first save"));
+
+    assertThatThrownBy(
+            () ->
+                fileSaveService.saveFile(
+                    project.getPublicId(),
+                    owner.getId(),
+                    file.getId(),
+                    createSaveRequest("stale content", 0L, "stale save")))
+        .isInstanceOf(BusinessException.class);
   }
 
   @Test
@@ -104,13 +134,15 @@ class FileSaveServiceIntegrationTest {
                     project.getPublicId(),
                     viewer.getId(),
                     file.getId(),
-                    createSaveRequest("class Main {}", "viewer save")))
+                    createSaveRequest("class Main {}", 0L, "viewer save")))
         .isInstanceOf(BusinessException.class);
   }
 
-  private FileSaveRequest createSaveRequest(String content, String changeMessage) {
+  private FileSaveRequest createSaveRequest(
+      String content, Long baseRevision, String changeMessage) {
     FileSaveRequest request = new FileSaveRequest();
     ReflectionTestUtils.setField(request, "content", content);
+    ReflectionTestUtils.setField(request, "baseRevision", baseRevision);
     ReflectionTestUtils.setField(request, "changeMessage", changeMessage);
     return request;
   }

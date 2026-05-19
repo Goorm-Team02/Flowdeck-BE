@@ -41,13 +41,18 @@ public class FileSaveService {
     ProjectFile file =
         projectFileRepository
             .findByIdAndProject(fileId, project)
-            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
     if (!file.isFile()) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
+    }
+
+    if (file.getEditRevision() != request.getBaseRevision()) {
+      throw new BusinessException(ErrorCode.FILE_EDIT_CONFLICT);
     }
 
     file.updateContent(request.getContent());
+    file.increaseEditRevision();
 
     return FileSaveResponse.from(file);
   }

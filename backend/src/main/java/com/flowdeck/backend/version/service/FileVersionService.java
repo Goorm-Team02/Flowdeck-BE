@@ -94,11 +94,8 @@ public class FileVersionService {
     ProjectFile file = getProjectFile(projectId, fileId);
     FileVersion version = getFileVersion(file, versionId);
 
-    if (!file.isFile()) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-    }
-
     file.updateContent(version.getContent());
+    file.increaseEditRevision();
     file.increaseVersion();
 
     FileVersion restoredVersion =
@@ -124,11 +121,11 @@ public class FileVersionService {
     FileVersion from =
         fileVersionRepository
             .findByFileAndVersionNumber(file, fromVersion)
-            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
     FileVersion to =
         fileVersionRepository
             .findByFileAndVersionNumber(file, toVersion)
-            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
 
     List<DiffLineResponse> changes = createSimpleDiff(from.getContent(), to.getContent());
     int addedLines = countType(changes, "ADDED");
@@ -147,10 +144,10 @@ public class FileVersionService {
     ProjectFile file =
         projectFileRepository
             .findByIdAndProject(fileId, project)
-            .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
     if (!file.isFile()) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
     }
 
     return file;
@@ -159,7 +156,7 @@ public class FileVersionService {
   private FileVersion getFileVersion(ProjectFile file, Long versionId) {
     return fileVersionRepository
         .findByFileAndId(file, versionId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
   }
 
   private List<DiffLineResponse> createSimpleDiff(String oldContent, String newContent) {

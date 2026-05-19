@@ -96,7 +96,7 @@ public class ProjectFileService {
     ProjectFile file = getFile(project, fileId);
 
     if (!file.isFile()) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
     }
 
     return ProjectFileDetailResponse.from(file, file.getCurrentContent());
@@ -108,7 +108,7 @@ public class ProjectFileService {
     permissionService.validateProjectAccess(projectId, userId);
 
     if (keyword == null || keyword.isBlank()) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_INVALID_KEYWORD);
     }
 
     Project project = getProject(projectId);
@@ -170,7 +170,7 @@ public class ProjectFileService {
   private ProjectFile getFile(Project project, Long fileId) {
     return projectFileRepository
         .findByIdAndProject(fileId, project)
-        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
   }
 
   private ProjectFile getParent(Project project, Long parentId) {
@@ -180,7 +180,7 @@ public class ProjectFileService {
 
     ProjectFile parent = getFile(project, parentId);
     if (!parent.isFolder()) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_INVALID_TYPE);
     }
 
     return parent;
@@ -193,7 +193,7 @@ public class ProjectFileService {
             : projectFileRepository.existsByProjectAndParentAndName(project, parent, name);
 
     if (exists) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_NAME_DUPLICATED);
     }
   }
 
@@ -203,13 +203,13 @@ public class ProjectFileService {
     }
 
     if (file.getId().equals(newParent.getId())) {
-      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+      throw new BusinessException(ErrorCode.FILE_INVALID_MOVE_TARGET);
     }
 
     ProjectFile current = newParent.getParent();
     while (current != null) {
       if (file.getId().equals(current.getId())) {
-        throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        throw new BusinessException(ErrorCode.FILE_INVALID_MOVE_TARGET);
       }
       current = current.getParent();
     }
