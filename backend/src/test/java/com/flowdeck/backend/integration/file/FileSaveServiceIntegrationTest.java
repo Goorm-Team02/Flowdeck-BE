@@ -7,6 +7,7 @@ import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
+import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
@@ -115,6 +116,31 @@ class FileSaveServiceIntegrationTest {
                     file.getId(),
                     createSaveRequest("stale content", 0L, "stale save")))
         .isInstanceOf(BusinessException.class);
+  }
+
+  @Test
+  void saveFileFailsWhenContentSizeExceedsLimit() {
+    Project project =
+        projectRepository.save(
+            new Project("size limit project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("size-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Large.java", FileType.FILE));
+
+    String oversizedContent = "a".repeat(1024 * 1024 + 1);
+
+    assertThatThrownBy(
+            () ->
+                fileSaveService.saveFile(
+                    project.getPublicId(),
+                    owner.getId(),
+                    file.getId(),
+                    createSaveRequest(oversizedContent, 0L, "oversized save")))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.FILE_SIZE_EXCEEDED);
   }
 
   @Test

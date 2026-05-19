@@ -75,6 +75,7 @@ class FileVersionServiceIntegrationTest {
     List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file);
 
     assertThat(response.currentVersion()).isEqualTo(1);
+    assertThat(response.editRevision()).isZero();
     assertThat(file.getCurrentVersion()).isEqualTo(1);
     assertThat(versions).hasSize(1);
     assertThat(versions.get(0).getVersionNumber()).isEqualTo(1);
@@ -107,7 +108,9 @@ class FileVersionServiceIntegrationTest {
     List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file);
 
     assertThat(response.currentVersion()).isEqualTo(3);
+    assertThat(response.editRevision()).isEqualTo(1);
     assertThat(file.getCurrentVersion()).isEqualTo(3);
+    assertThat(file.getEditRevision()).isEqualTo(1);
     assertThat(file.getCurrentContent()).isEqualTo("v1 content");
     assertThat(versions).hasSize(3);
     assertThat(versions).extracting(FileVersion::getVersionNumber).containsExactly(3, 2, 1);
