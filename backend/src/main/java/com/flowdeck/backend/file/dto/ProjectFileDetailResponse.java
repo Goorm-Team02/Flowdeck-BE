@@ -10,6 +10,7 @@ public record ProjectFileDetailResponse(
     String name,
     FileType type,
     int currentVersion,
+    long editRevision,
     String content,
     Instant createdAt,
     Instant updatedAt) {
@@ -23,6 +24,7 @@ public record ProjectFileDetailResponse(
         file.getName(),
         file.getType(),
         file.getCurrentVersion(),
+        file.getEditRevision(),
         content,
         file.getCreatedAt(),
         file.getUpdatedAt());

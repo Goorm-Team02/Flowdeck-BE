@@ -47,7 +47,12 @@ public class FileSaveService {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
 
+    if (file.getEditRevision() != request.getBaseRevision()) {
+      throw new BusinessException(ErrorCode.FILE_EDIT_CONFLICT);
+    }
+
     file.updateContent(request.getContent());
+    file.increaseEditRevision();
 
     return FileSaveResponse.from(file);
   }

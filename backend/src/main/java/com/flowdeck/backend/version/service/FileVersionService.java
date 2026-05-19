@@ -99,6 +99,7 @@ public class FileVersionService {
     }
 
     file.updateContent(version.getContent());
+    file.increaseEditRevision();
     file.increaseVersion();
 
     FileVersion restoredVersion =
