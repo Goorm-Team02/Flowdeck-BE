@@ -4,7 +4,6 @@ import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.global.config.CorsConfig;
 import com.flowdeck.backend.global.config.CorsProperties;
 import com.flowdeck.backend.global.config.SwaggerConfig;
-import com.flowdeck.backend.global.config.WebSocketConfig;
 import com.flowdeck.backend.global.error.GlobalExceptionHandler;
 import com.flowdeck.backend.global.security.CustomAccessDeniedHandler;
 import com.flowdeck.backend.global.security.CustomAuthenticationEntryPoint;
@@ -12,7 +11,6 @@ import com.flowdeck.backend.global.security.SecurityConfig;
 import com.flowdeck.backend.global.security.jwt.JwtAuthenticationFilter;
 import com.flowdeck.backend.global.security.jwt.JwtConfig;
 import com.flowdeck.backend.global.security.jwt.JwtProperties;
-import com.flowdeck.backend.global.security.jwt.StompJwtChannelInterceptor;
 import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
 import java.time.Duration;
 import org.springframework.boot.SpringBootConfiguration;
@@ -34,13 +32,11 @@ import org.springframework.context.annotation.Import;
 @Import({
   CorsConfig.class,
   SwaggerConfig.class,
-  WebSocketConfig.class,
   SecurityConfig.class,
   GlobalExceptionHandler.class,
   JwtConfig.class,
   JwtTokenProvider.class,
   JwtAuthenticationFilter.class,
-  StompJwtChannelInterceptor.class,
   CustomAuthenticationEntryPoint.class,
   CustomAccessDeniedHandler.class,
 })

@@ -82,12 +82,7 @@ public class ProjectMemberService {
     projectMessageService.createLogMessage(
         projectId,
         requesterId,
-        requester.getName()
-            + "님이 "
-            + user.getName()
-            + "님을 "
-            + request.getRole()
-            + " 권한으로 초대했습니다.");
+        requester.getName() + "님이 " + user.getName() + "님을 " + request.getRole() + " 권한으로 초대했습니다.");
 
     return MemberResponse.from(savedMember);
   }

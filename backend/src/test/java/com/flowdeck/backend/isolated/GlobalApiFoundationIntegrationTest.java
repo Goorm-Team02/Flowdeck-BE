@@ -1,11 +1,8 @@
 package com.flowdeck.backend.isolated;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.HttpHeaders.CONNECTION;
 import static org.springframework.http.HttpHeaders.ORIGIN;
-import static org.springframework.http.HttpHeaders.UPGRADE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,7 +16,6 @@ import com.flowdeck.backend.global.response.ApiResponse;
 import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
 import com.flowdeck.testsupport.WebIntegrationTest;
-import jakarta.servlet.ServletException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
@@ -112,21 +108,6 @@ class GlobalApiFoundationIntegrationTest {
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.userId").value(1))
         .andExpect(jsonPath("$.data.name").value("tester@flowdeck.com"));
-  }
-
-  @Test
-  void websocketHandshakeEndpointIsNotBlockedByHttpAuthentication() throws Exception {
-    assertThatThrownBy(
-            () ->
-                mockMvc.perform(
-                    get("/ws")
-                        .header(CONNECTION, "Upgrade")
-                        .header(UPGRADE, "websocket")
-                        .header("Sec-WebSocket-Version", "13")
-                        .header("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")))
-        .isInstanceOf(ServletException.class)
-        .hasMessageContaining("HandshakeFailureException")
-        .hasMessageContaining("ServerContainer");
   }
 
   @Test

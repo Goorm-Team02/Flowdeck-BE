@@ -86,8 +86,7 @@ class ProjectMessageControllerIntegrationTest {
     projectMessageBroadcaster.reset();
 
     project =
-        projectRepository.save(
-            new Project("Flowdeck", "프로젝트 메시지 테스트", ProjectVisibility.PUBLIC));
+        projectRepository.save(new Project("Flowdeck", "프로젝트 메시지 테스트", ProjectVisibility.PUBLIC));
     owner = userRepository.save(new User("message-owner@test.com", "password", "owner"));
     editor = userRepository.save(new User("message-editor@test.com", "password", "editor"));
     viewer = userRepository.save(new User("message-viewer@test.com", "password", "viewer"));

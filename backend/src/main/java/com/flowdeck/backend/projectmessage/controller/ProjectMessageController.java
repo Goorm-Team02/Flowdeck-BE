@@ -34,8 +34,7 @@ public class ProjectMessageController {
 
   @GetMapping
   public ApiResponse<ProjectMessageListResponse> getMessages(
-      @PathVariable String projectId,
-      @AuthenticationPrincipal JwtAuthentication principal) {
+      @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication principal) {
     return ApiResponse.success(
         ProjectMessageListResponse.from(
             projectMessageService.getMessages(projectId, requireUserId(principal))));

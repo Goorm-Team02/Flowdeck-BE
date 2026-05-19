@@ -161,10 +161,7 @@ class ProjectMemberServiceIntegrationTest {
     assertThat(logMessage.getUserId()).isEqualTo(owner.getId());
     assertThat(logMessage.getContent())
         .isEqualTo(
-            owner.getName()
-                + "님이 "
-                + viewer.getName()
-                + "님의 권한을 VIEWER에서 EDITOR(으)로 변경했습니다.");
+            owner.getName() + "님이 " + viewer.getName() + "님의 권한을 VIEWER에서 EDITOR(으)로 변경했습니다.");
   }
 
   @Test
