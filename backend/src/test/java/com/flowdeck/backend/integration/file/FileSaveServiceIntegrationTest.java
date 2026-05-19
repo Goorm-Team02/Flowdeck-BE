@@ -55,7 +55,7 @@ class FileSaveServiceIntegrationTest {
   }
 
   @Test
-  void saveFileCreatesVersionsAndIncreasesCurrentVersion() {
+  void saveFileUpdatesCurrentContentWithoutCreatingVersion() {
     Project project =
         projectRepository.save(new Project("project", "description", ProjectVisibility.PRIVATE));
     User owner = userRepository.save(new User("save-owner@test.com", "password", "owner"));
@@ -80,16 +80,11 @@ class FileSaveServiceIntegrationTest {
 
     List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file);
 
-    assertThat(firstResponse.currentVersion()).isEqualTo(1);
-    assertThat(secondResponse.currentVersion()).isEqualTo(2);
-    assertThat(file.getCurrentVersion()).isEqualTo(2);
-    assertThat(versions).hasSize(2);
-    assertThat(versions).extracting(FileVersion::getVersionNumber).containsExactly(2, 1);
-    assertThat(versions)
-        .extracting(FileVersion::getUserId)
-        .containsExactly(owner.getId(), owner.getId());
-    assertThat(versions.get(0).getContent()).isEqualTo("class Main { void run() {} }");
-    assertThat(versions.get(1).getContent()).isEqualTo("class Main {}");
+    assertThat(firstResponse.currentVersion()).isZero();
+    assertThat(secondResponse.currentVersion()).isZero();
+    assertThat(file.getCurrentVersion()).isZero();
+    assertThat(file.getCurrentContent()).isEqualTo("class Main { void run() {} }");
+    assertThat(versions).isEmpty();
   }
 
   @Test

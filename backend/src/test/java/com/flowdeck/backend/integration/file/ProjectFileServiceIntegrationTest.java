@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
+import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.file.service.ProjectFileService;
 import com.flowdeck.backend.member.domain.ProjectMember;
@@ -44,6 +45,47 @@ class ProjectFileServiceIntegrationTest {
     this.projectFileService = projectFileService;
     this.userRepository = userRepository;
     this.projectMemberRepository = projectMemberRepository;
+  }
+
+  @Test
+  void getFileReturnsCurrentContent() {
+    Project project =
+        projectRepository.save(
+            new Project("detail project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("detail-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+    file.updateContent("current content");
+    projectFileRepository.save(file);
+
+    ProjectFileDetailResponse response =
+        projectFileService.getFile(project.getPublicId(), owner.getId(), file.getId());
+
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.name()).isEqualTo("Main.java");
+    assertThat(response.currentVersion()).isZero();
+    assertThat(response.content()).isEqualTo("current content");
+  }
+
+  @Test
+  void getFileReturnsEmptyContentWhenFileHasNoVersion() {
+    Project project =
+        projectRepository.save(
+            new Project("empty file project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("empty-detail-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Empty.java", FileType.FILE));
+
+    ProjectFileDetailResponse response =
+        projectFileService.getFile(project.getPublicId(), owner.getId(), file.getId());
+
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.currentVersion()).isZero();
+    assertThat(response.content()).isEmpty();
   }
 
   @Test

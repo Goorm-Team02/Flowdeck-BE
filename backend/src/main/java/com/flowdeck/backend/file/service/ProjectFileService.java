@@ -2,6 +2,7 @@ package com.flowdeck.backend.file.service;
 
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.dto.ProjectFileCreateRequest;
+import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
 import com.flowdeck.backend.file.dto.ProjectFileMoveRequest;
 import com.flowdeck.backend.file.dto.ProjectFileRenameRequest;
 import com.flowdeck.backend.file.dto.ProjectFileResponse;
@@ -88,13 +89,17 @@ public class ProjectFileService {
   }
 
   @Transactional(readOnly = true)
-  public ProjectFileResponse getFile(String projectId, Long userId, Long fileId) {
+  public ProjectFileDetailResponse getFile(String projectId, Long userId, Long fileId) {
     permissionService.validateProjectAccess(projectId, userId);
 
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 
-    return ProjectFileResponse.from(file);
+    if (!file.isFile()) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    return ProjectFileDetailResponse.from(file, file.getCurrentContent());
   }
 
   @Transactional(readOnly = true)
