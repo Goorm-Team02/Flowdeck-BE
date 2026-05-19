@@ -7,10 +7,8 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
-import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
-import com.flowdeck.backend.version.repository.FileVersionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,17 +17,14 @@ public class FileSaveService {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
-  private final FileVersionRepository fileVersionRepository;
   private final PermissionService permissionService;
 
   public FileSaveService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
-      FileVersionRepository fileVersionRepository,
       PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
-    this.fileVersionRepository = fileVersionRepository;
     this.permissionService = permissionService;
   }
 
@@ -52,16 +47,7 @@ public class FileSaveService {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
 
-    file.increaseVersion();
-
-    FileVersion version =
-        new FileVersion(
-            file,
-            userId,
-            file.getCurrentVersion(),
-            request.getContent(),
-            request.getChangeMessage());
-    fileVersionRepository.save(version);
+    file.updateContent(request.getContent());
 
     return FileSaveResponse.from(file);
   }

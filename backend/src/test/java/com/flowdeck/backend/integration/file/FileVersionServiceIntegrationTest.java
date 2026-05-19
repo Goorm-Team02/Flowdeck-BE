@@ -16,6 +16,8 @@ import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
+import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
+import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import com.flowdeck.backend.version.service.FileVersionService;
@@ -23,6 +25,7 @@ import com.flowdeck.testsupport.DatabaseIntegrationTest;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
@@ -53,6 +56,34 @@ class FileVersionServiceIntegrationTest {
   }
 
   @Test
+  void createVersionSnapshotsCurrentContentAndIncreasesCurrentVersion() {
+    Project project =
+        projectRepository.save(
+            new Project("version create project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("version-create-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+    file.updateContent("class Main { void run() {} }");
+
+    FileVersionCreateResponse response =
+        fileVersionService.createVersion(
+            project.getPublicId(), owner.getId(), file.getId(), createVersionRequest("first save"));
+
+    List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file);
+
+    assertThat(response.currentVersion()).isEqualTo(1);
+    assertThat(file.getCurrentVersion()).isEqualTo(1);
+    assertThat(versions).hasSize(1);
+    assertThat(versions.get(0).getVersionNumber()).isEqualTo(1);
+    assertThat(versions.get(0).getContent()).isEqualTo("class Main { void run() {} }");
+    assertThat(versions.get(0).getChangeMessage()).isEqualTo("first save");
+    assertThat(versions.get(0).getUserId()).isEqualTo(owner.getId());
+  }
+
+  @Test
   void restoreVersionCreatesNewVersionWithoutChangingPreviousVersions() {
     Project project =
         projectRepository.save(new Project("project", "description", ProjectVisibility.PRIVATE));
@@ -77,6 +108,7 @@ class FileVersionServiceIntegrationTest {
 
     assertThat(response.currentVersion()).isEqualTo(3);
     assertThat(file.getCurrentVersion()).isEqualTo(3);
+    assertThat(file.getCurrentContent()).isEqualTo("v1 content");
     assertThat(versions).hasSize(3);
     assertThat(versions).extracting(FileVersion::getVersionNumber).containsExactly(3, 2, 1);
     assertThat(versions.get(0).getUserId()).isEqualTo(owner.getId());
@@ -106,5 +138,11 @@ class FileVersionServiceIntegrationTest {
                 fileVersionService.restoreVersion(
                     project.getPublicId(), viewer.getId(), file.getId(), version.getId()))
         .isInstanceOf(BusinessException.class);
+  }
+
+  private FileVersionCreateRequest createVersionRequest(String changeMessage) {
+    FileVersionCreateRequest request = new FileVersionCreateRequest();
+    ReflectionTestUtils.setField(request, "changeMessage", changeMessage);
+    return request;
   }
 }

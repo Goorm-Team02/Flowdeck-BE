@@ -13,8 +13,6 @@ public interface FileVersionRepository extends JpaRepository<FileVersion, Long> 
 
   List<FileVersion> findAllByFileOrderByVersionNumberDesc(ProjectFile file);
 
-  Optional<FileVersion> findTopByFileOrderByVersionNumberDesc(ProjectFile file);
-
   Optional<FileVersion> findByFileAndId(ProjectFile file, Long id);
 
   Optional<FileVersion> findByFileAndVersionNumber(ProjectFile file, int versionNumber);
