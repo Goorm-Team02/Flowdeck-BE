@@ -58,6 +58,7 @@ class ProjectFileServiceIntegrationTest {
     ProjectFile file =
         projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
     file.updateContent("current content");
+    file.increaseEditRevision();
     projectFileRepository.save(file);
 
     ProjectFileDetailResponse response =
@@ -66,6 +67,7 @@ class ProjectFileServiceIntegrationTest {
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.name()).isEqualTo("Main.java");
     assertThat(response.currentVersion()).isZero();
+    assertThat(response.editRevision()).isEqualTo(1);
     assertThat(response.content()).isEqualTo("current content");
   }
 
@@ -85,6 +87,7 @@ class ProjectFileServiceIntegrationTest {
 
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.currentVersion()).isZero();
+    assertThat(response.editRevision()).isZero();
     assertThat(response.content()).isEmpty();
   }
 
