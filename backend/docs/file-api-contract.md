@@ -187,7 +187,35 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ---
 
-## 6. 추후 검토 항목
+## 6. 운영 DB 마이그레이션 주의사항
+
+현재 MVP 개발 환경에서는 JPA `ddl-auto` 기준으로 컬럼이 반영될 수 있습니다.
+
+운영 배포 전에는 다음 컬럼에 대해 명시적 마이그레이션이 필요합니다.
+
+### project_files.current_content
+
+- 기존 행 기본값: `''`
+- nullable: false
+- 현재 파일 내용을 저장합니다.
+- 일반 저장 API에서 갱신됩니다.
+
+### project_files.edit_revision
+
+- 기존 행 기본값: `0`
+- nullable: false
+- 파일 저장 충돌 감지를 위한 수정 번호입니다.
+- 파일 저장 또는 버전 복원 성공 시 증가합니다.
+
+### 파일 크기 제한
+
+- 현재 서버 상수 기준 최대 1MB입니다.
+- UTF-8 byte 기준으로 계산합니다.
+- 추후 운영 설정으로 분리할 수 있습니다.
+
+---
+
+## 7. 추후 검토 항목
 
 - 충돌 응답에 서버 최신 `editRevision`과 최신 `content`를 포함할지 여부
 - 프론트 충돌 모달 UX
