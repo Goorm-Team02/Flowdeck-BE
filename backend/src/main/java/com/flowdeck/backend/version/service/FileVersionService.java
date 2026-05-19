@@ -9,6 +9,8 @@ import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
+import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
+import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
 import com.flowdeck.backend.version.dto.FileVersionListResponse;
@@ -65,6 +67,26 @@ public class FileVersionService {
   }
 
   @Transactional
+  public FileVersionCreateResponse createVersion(
+      String projectId, Long userId, Long fileId, FileVersionCreateRequest request) {
+    permissionService.validateEditor(projectId, userId);
+
+    ProjectFile file = getProjectFile(projectId, fileId);
+    file.increaseVersion();
+
+    FileVersion version =
+        new FileVersion(
+            file,
+            userId,
+            file.getCurrentVersion(),
+            file.getCurrentContent(),
+            request.getChangeMessage());
+    fileVersionRepository.save(version);
+
+    return FileVersionCreateResponse.from(file);
+  }
+
+  @Transactional
   public FileVersionRestoreResponse restoreVersion(
       String projectId, Long userId, Long fileId, Long versionId) {
     permissionService.validateEditor(projectId, userId);
@@ -76,6 +98,7 @@ public class FileVersionService {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
 
+    file.updateContent(version.getContent());
     file.increaseVersion();
 
     FileVersion restoredVersion =

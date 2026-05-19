@@ -48,7 +48,7 @@ class ProjectFileServiceIntegrationTest {
   }
 
   @Test
-  void getFileReturnsLatestContent() {
+  void getFileReturnsCurrentContent() {
     Project project =
         projectRepository.save(
             new Project("detail project", "description", ProjectVisibility.PRIVATE));
@@ -57,11 +57,7 @@ class ProjectFileServiceIntegrationTest {
 
     ProjectFile file =
         projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
-    file.increaseVersion();
-    fileVersionRepository.save(new FileVersion(file, owner.getId(), 1, "v1 content", "first save"));
-    file.increaseVersion();
-    fileVersionRepository.save(
-        new FileVersion(file, owner.getId(), 2, "v2 content", "second save"));
+    file.updateContent("current content");
     projectFileRepository.save(file);
 
     ProjectFileDetailResponse response =
@@ -69,8 +65,8 @@ class ProjectFileServiceIntegrationTest {
 
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.name()).isEqualTo("Main.java");
-    assertThat(response.currentVersion()).isEqualTo(2);
-    assertThat(response.content()).isEqualTo("v2 content");
+    assertThat(response.currentVersion()).isZero();
+    assertThat(response.content()).isEqualTo("current content");
   }
 
   @Test

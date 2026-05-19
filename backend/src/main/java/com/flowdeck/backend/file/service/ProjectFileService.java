@@ -14,7 +14,6 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
-import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,19 +28,16 @@ public class ProjectFileService {
   private final ProjectFileRepository projectFileRepository;
   private final ProjectFileDeletionService projectFileDeletionService;
   private final PermissionService permissionService;
-  private final FileVersionRepository fileVersionRepository;
 
   public ProjectFileService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       ProjectFileDeletionService projectFileDeletionService,
-      PermissionService permissionService,
-      FileVersionRepository fileVersionRepository) {
+      PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.projectFileDeletionService = projectFileDeletionService;
     this.permissionService = permissionService;
-    this.fileVersionRepository = fileVersionRepository;
   }
 
   @Transactional
@@ -103,13 +99,7 @@ public class ProjectFileService {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
 
-    String content =
-        fileVersionRepository
-            .findTopByFileOrderByVersionNumberDesc(file)
-            .map(version -> version.getContent())
-            .orElse("");
-
-    return ProjectFileDetailResponse.from(file, content);
+    return ProjectFileDetailResponse.from(file, file.getCurrentContent());
   }
 
   @Transactional(readOnly = true)
