@@ -101,11 +101,12 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 체크:
 
 - [ ] 로그인 시 `auth:refresh:{userId}` 저장 확인
-- [ ] 로그아웃 시 `auth:blacklist:{token}` 저장 확인
+- [ ] 로그인 시 refresh token 원문이 아닌 SHA-256 해시 저장 확인
+- [ ] 로그아웃 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
 - [ ] 로그아웃 시 refresh token 삭제 확인
 - [ ] 멤버 권한 변경/탈퇴 시 `auth:force-logout:{userId}` 저장 확인
 - [ ] TTL이 의도한 시간으로 설정되는지 확인
-- [ ] Redis에 토큰 원문 저장 여부와 해시 저장 전환 필요성 검토
+- [x] Redis 토큰 원문 저장 제거 및 해시 저장 전환 반영
 
 ---
 

@@ -260,8 +260,8 @@ Redis는 빠른 조회와 TTL 기반 임시 데이터에 적합하지만,
 
 ### 반영 내용
 
-- `auth:refresh:{userId}`: Refresh Token 저장
-- `auth:blacklist:{token}`: 로그아웃된 Access Token 차단
+- `auth:refresh:{userId}`: Refresh Token 해시 저장
+- `auth:blacklist:{sha256(accessToken)}`: 로그아웃된 Access Token 차단
 - `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 강제 로그아웃
 - `presence:project:{projectId}`: 프로젝트 접속자 상태 후보
 - `ws:session:{sessionId}`: WebSocket 세션 보조 후보
@@ -293,11 +293,11 @@ JWT에는 인증과 권한 검증에 필요한 최소 식별 정보만 포함합
 - 파일 원문
 - 프로젝트 상세 데이터
 
-### 운영 보완 후보
+### 토큰 저장 보안 반영
 
 현재 MVP에서는 Redis에 refresh token과 access token blacklist를 저장합니다.
 
-운영 보안을 더 강화하려면 토큰 원문 대신 해시 값을 저장하는 방식으로 전환할 수 있습니다.
+단, Redis에 토큰 원문을 저장하지 않기 위해 SHA-256 해시 값을 저장합니다.
 
 - `auth:blacklist:{accessToken}`
   → `auth:blacklist:{sha256(accessToken)}`
@@ -306,6 +306,12 @@ JWT에는 인증과 권한 검증에 필요한 최소 식별 정보만 포함합
   → `auth:refresh:{userId} -> sha256(refreshToken)`
 
 이 방식은 Redis key/value가 노출되더라도 토큰 원문 유출 위험을 줄일 수 있습니다.
+
+Refresh token 재발급 시에는 사용자가 제출한 refresh token을 같은 방식으로 해시한 뒤
+Redis에 저장된 해시 값과 비교합니다.
+
+Access token 로그아웃 차단 여부도 원문 access token을 그대로 key에 넣지 않고,
+해시 기반 blacklist key를 조회하는 방식으로 처리합니다.
 
 ---
 
