@@ -9,7 +9,6 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     open-in-view: false
-    show-sql: ${JPA_SHOW_SQL:true}
     properties:
       hibernate:
         format_sql: true
@@ -24,7 +23,6 @@ app:
     max-age: ${CORS_MAX_AGE:3600}
   security:
     jwt:
-      secret: ${JWT_SECRET:flowdeck-local-jwt-secret-key-change-me-now-123456}
       access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
       refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}
 ---
@@ -38,5 +36,18 @@ spring:
     password: ${DB_PASSWORD:flowdeck}
     driver-class-name: org.postgresql.Driver
   jpa:
+    show-sql: ${JPA_SHOW_SQL:true}
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    disable-swagger-default-url: true
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:flowdeck-local-jwt-secret-key-change-me-now-123456}

@@ -68,6 +68,16 @@ class GlobalApiFoundationIntegrationTest {
   }
 
   @Test
+  void missingEndpointReturnsCommonNotFoundResponse() throws Exception {
+    mockMvc
+        .perform(get("/swagger-ui/does-not-exist.html"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("COMMON_404"))
+        .andExpect(jsonPath("$.message").value("리소스를 찾을 수 없습니다."));
+  }
+
+  @Test
   void validationExceptionIsHandledWithCommonErrorResponse() throws Exception {
     mockMvc
         .perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{}"))
