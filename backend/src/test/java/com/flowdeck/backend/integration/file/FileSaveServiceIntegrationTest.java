@@ -115,7 +115,9 @@ class FileSaveServiceIntegrationTest {
                     owner.getId(),
                     file.getId(),
                     createSaveRequest("stale content", 0L, "stale save")))
-        .isInstanceOf(BusinessException.class);
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.FILE_EDIT_CONFLICT);
   }
 
   @Test
