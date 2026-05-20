@@ -1,12 +1,17 @@
 package com.flowdeck.backend.version.service;
 
 import com.flowdeck.backend.file.domain.ProjectFile;
+import com.flowdeck.backend.file.dto.ProjectFileEventResponse;
+import com.flowdeck.backend.file.realtime.ProjectFileBroadcaster;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.user.domain.User;
+import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
@@ -22,14 +27,23 @@ public class FileSaveService {
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
   private final PermissionService permissionService;
+  private final UserRepository userRepository;
+  private final ProjectFileBroadcaster projectFileBroadcaster;
+  private final AfterCommitExecutor afterCommitExecutor;
 
   public FileSaveService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
-      PermissionService permissionService) {
+      PermissionService permissionService,
+      UserRepository userRepository,
+      ProjectFileBroadcaster projectFileBroadcaster,
+      AfterCommitExecutor afterCommitExecutor) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.permissionService = permissionService;
+    this.userRepository = userRepository;
+    this.projectFileBroadcaster = projectFileBroadcaster;
+    this.afterCommitExecutor = afterCommitExecutor;
   }
 
   @Transactional
@@ -60,6 +74,10 @@ public class FileSaveService {
 
     file.updateContent(request.getContent());
     file.increaseEditRevision();
+    afterCommitExecutor.run(
+        () ->
+            projectFileBroadcaster.broadcast(
+                ProjectFileEventResponse.saved(projectId, file, userId, getActorName(userId))));
 
     return FileSaveResponse.from(file);
   }
@@ -69,5 +87,13 @@ public class FileSaveService {
     if (contentBytes > MAX_FILE_CONTENT_BYTES) {
       throw new BusinessException(ErrorCode.FILE_SIZE_EXCEEDED);
     }
+  }
+
+  private String getActorName(Long userId) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+    return user.getName();
   }
 }

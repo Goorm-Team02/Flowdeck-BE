@@ -1,12 +1,17 @@
 package com.flowdeck.backend.version.service;
 
 import com.flowdeck.backend.file.domain.ProjectFile;
+import com.flowdeck.backend.file.dto.ProjectFileEventResponse;
+import com.flowdeck.backend.file.realtime.ProjectFileBroadcaster;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.user.domain.User;
+import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
@@ -31,16 +36,25 @@ public class FileVersionService {
   private final ProjectFileRepository projectFileRepository;
   private final FileVersionRepository fileVersionRepository;
   private final PermissionService permissionService;
+  private final UserRepository userRepository;
+  private final ProjectFileBroadcaster projectFileBroadcaster;
+  private final AfterCommitExecutor afterCommitExecutor;
 
   public FileVersionService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       FileVersionRepository fileVersionRepository,
-      PermissionService permissionService) {
+      PermissionService permissionService,
+      UserRepository userRepository,
+      ProjectFileBroadcaster projectFileBroadcaster,
+      AfterCommitExecutor afterCommitExecutor) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.fileVersionRepository = fileVersionRepository;
     this.permissionService = permissionService;
+    this.userRepository = userRepository;
+    this.projectFileBroadcaster = projectFileBroadcaster;
+    this.afterCommitExecutor = afterCommitExecutor;
   }
 
   @Transactional(readOnly = true)
@@ -118,6 +132,10 @@ public class FileVersionService {
             "버전 " + version.getVersionNumber() + " 복원");
 
     fileVersionRepository.save(restoredVersion);
+    afterCommitExecutor.run(
+        () ->
+            projectFileBroadcaster.broadcast(
+                ProjectFileEventResponse.restored(projectId, file, userId, getActorName(userId))));
 
     return FileVersionRestoreResponse.from(file);
   }
@@ -198,5 +216,13 @@ public class FileVersionService {
 
   private int countType(List<DiffLineResponse> changes, String type) {
     return (int) changes.stream().filter(change -> type.equals(change.type())).count();
+  }
+
+  private String getActorName(Long userId) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+    return user.getName();
   }
 }

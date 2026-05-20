@@ -278,6 +278,6 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] WebSocket presence Redis TTL 정책 확정
 - [x] 파일 편집은 강제 lock 대신 Editing Presence 방향으로 결정
 - [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
-- [ ] 파일 이벤트 WebSocket 발행 구현
+- [x] 파일 이벤트 WebSocket 발행 구현
 - [ ] Editing Presence 구현
 - [ ] `metadataRevision` 또는 `treeRevision` 도입 여부 검토
