@@ -25,3 +25,24 @@
 - 필요하면 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JPA_DDL_AUTO`, `JPA_SHOW_SQL`로 값을 덮어쓰기 가능
 - 로컬 DB는 `docker compose -f docker-compose.dev.yaml up -d`로 실행
 - 예시 환경 변수 : `.env.example`
+
+## Docker 배포 이미지
+
+- 백엔드 이미지는 `backend/Dockerfile` 기준으로 빌드
+- 기본 실행 프로필은 `dev`, 운영 배포 시에는 `SPRING_PROFILES_ACTIVE=prod`로 덮어쓰기
+
+```bash
+docker build -f backend/Dockerfile -t flowdeck-backend:dev backend
+```
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=dev \
+  -e DB_URL=jdbc:postgresql://host.docker.internal:5432/flowdeck \
+  -e DB_USERNAME=flowdeck \
+  -e DB_PASSWORD=flowdeck \
+  -e REDIS_HOST=host.docker.internal \
+  -e REDIS_PORT=6379 \
+  -e JWT_SECRET=change-me \
+  flowdeck-backend:dev
+```
