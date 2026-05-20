@@ -69,3 +69,7 @@ backend/src/main/resources/application-*.local.properties
 *.swp
 *.swo
 *~
+
+# 정적 API 문서 생성물
+docs/openapi.json
+/.gradle-temp
