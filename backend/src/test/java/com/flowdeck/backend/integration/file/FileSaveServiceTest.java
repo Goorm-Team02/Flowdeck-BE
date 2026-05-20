@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
 @Transactional
-class FileSaveServiceIntegrationTest {
+class FileSaveServiceTest {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -42,7 +42,7 @@ class FileSaveServiceIntegrationTest {
   private final ProjectMemberRepository projectMemberRepository;
 
   @Autowired
-  FileSaveServiceIntegrationTest(
+  FileSaveServiceTest(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       FileVersionRepository fileVersionRepository,

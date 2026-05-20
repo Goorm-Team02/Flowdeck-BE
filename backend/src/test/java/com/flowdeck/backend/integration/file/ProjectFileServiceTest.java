@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @DatabaseIntegrationTest
-class ProjectFileServiceIntegrationTest {
+class ProjectFileServiceTest {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -36,7 +36,7 @@ class ProjectFileServiceIntegrationTest {
   private final ProjectMemberRepository projectMemberRepository;
 
   @Autowired
-  ProjectFileServiceIntegrationTest(
+  ProjectFileServiceTest(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       FileVersionRepository fileVersionRepository,

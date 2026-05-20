@@ -2,9 +2,7 @@ package com.flowdeck.backend.integration.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
-import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
@@ -24,20 +22,18 @@ import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.testsupport.DatabaseIntegrationTest;
+import com.flowdeck.testsupport.MockAuthTokenServiceConfig;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
 @Transactional
-@Import(ProjectMemberServiceIntegrationTest.TestSupportConfig.class)
-class ProjectMemberServiceIntegrationTest {
+@Import(MockAuthTokenServiceConfig.class)
+class ProjectMemberServiceTest {
 
   private final ProjectService projectService;
   private final ProjectMemberService projectMemberService;
@@ -48,7 +44,7 @@ class ProjectMemberServiceIntegrationTest {
   private final ProjectMessageRepository projectMessageRepository;
 
   @Autowired
-  ProjectMemberServiceIntegrationTest(
+  ProjectMemberServiceTest(
       ProjectService projectService,
       ProjectMemberService projectMemberService,
       PermissionService permissionService,
@@ -270,15 +266,5 @@ class ProjectMemberServiceIntegrationTest {
   private List<ProjectMessage> getMessages(String projectId) {
     Project project = projectRepository.findByPublicId(projectId).orElseThrow();
     return projectMessageRepository.findByProjectIdOrderByCreatedAtAsc(project.getId());
-  }
-
-  @TestConfiguration
-  static class TestSupportConfig {
-
-    @Bean
-    @Primary
-    AuthTokenService authTokenService() {
-      return mock(AuthTokenService.class);
-    }
   }
 }

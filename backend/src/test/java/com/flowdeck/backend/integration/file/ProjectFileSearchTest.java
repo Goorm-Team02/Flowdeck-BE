@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
 @Transactional
-class ProjectFileSearchIntegrationTest {
+class ProjectFileSearchTest {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -34,7 +34,7 @@ class ProjectFileSearchIntegrationTest {
   private final ProjectMemberRepository projectMemberRepository;
 
   @Autowired
-  ProjectFileSearchIntegrationTest(
+  ProjectFileSearchTest(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       ProjectFileService projectFileService,
