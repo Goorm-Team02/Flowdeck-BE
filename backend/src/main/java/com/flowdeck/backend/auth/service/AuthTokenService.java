@@ -1,6 +1,10 @@
 package com.flowdeck.backend.auth.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +22,12 @@ public class AuthTokenService {
   }
 
   public void saveRefreshToken(Long userId, String refreshToken, Duration ttl) {
-    stringRedisTemplate.opsForValue().set(refreshKey(userId), refreshToken, ttl);
+    stringRedisTemplate.opsForValue().set(refreshKey(userId), hash(refreshToken), ttl);
   }
 
   public boolean matchesRefreshToken(Long userId, String refreshToken) {
-    String savedToken = stringRedisTemplate.opsForValue().get(refreshKey(userId));
-    return refreshToken.equals(savedToken);
+    String savedTokenHash = stringRedisTemplate.opsForValue().get(refreshKey(userId));
+    return hash(refreshToken).equals(savedTokenHash);
   }
 
   public void deleteRefreshToken(Long userId) {
@@ -51,10 +55,20 @@ public class AuthTokenService {
   }
 
   private String blacklistKey(String accessToken) {
-    return BLACKLIST_KEY_PREFIX + accessToken;
+    return BLACKLIST_KEY_PREFIX + hash(accessToken);
   }
 
   private String forceLogoutKey(Long userId) {
     return FORCE_LOGOUT_KEY_PREFIX + userId;
+  }
+
+  private String hash(String token) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hashedToken = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(hashedToken);
+    } catch (NoSuchAlgorithmException exception) {
+      throw new IllegalStateException("SHA-256 algorithm is not available.", exception);
+    }
   }
 }
