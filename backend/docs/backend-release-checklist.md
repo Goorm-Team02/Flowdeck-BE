@@ -208,6 +208,7 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 버전 목록 조회
 - [ ] 버전 복원
 - [ ] 저장 충돌 409 확인
+- [ ] 동시 편집 중 오래된 baseRevision 저장 요청 차단 확인
 - [ ] 파일 검색
 
 ### 채팅/WebSocket
@@ -243,3 +244,5 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 파일 크기 제한값 설정 분리
 - [ ] Public 프로젝트 공개 범위 최종 확정
 - [ ] WebSocket presence Redis TTL 정책 확정
+- [ ] 파일 편집 presence / soft lock 도입 여부 결정
+- [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
