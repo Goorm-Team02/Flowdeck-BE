@@ -7,6 +7,7 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
 import java.nio.charset.StandardCharsets;
@@ -51,7 +52,8 @@ public class FileSaveService {
     }
 
     if (file.getEditRevision() != request.getBaseRevision()) {
-      throw new BusinessException(ErrorCode.FILE_EDIT_CONFLICT);
+      throw new BusinessException(
+          ErrorCode.FILE_EDIT_CONFLICT, FileConflictResponse.from(file, request.getBaseRevision()));
     }
 
     validateContentSize(request.getContent());
