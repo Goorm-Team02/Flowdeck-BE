@@ -13,6 +13,8 @@ import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
 import com.flowdeck.backend.version.service.FileSaveService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Project Files", description = "프로젝트 파일/폴더 관리 및 현재 파일 내용 저장 API")
 @RequestMapping("/api/projects/{projectId}/files")
 public class ProjectFileController {
 
@@ -67,6 +70,10 @@ public class ProjectFileController {
   }
 
   @GetMapping("/{fileId}")
+  @Operation(
+      summary = "파일 상세 조회",
+      description =
+          "파일 메타데이터와 현재 내용을 조회합니다. 응답의 content는 에디터 초기 내용으로, editRevision은 다음 저장 요청의 baseRevision으로 사용합니다.")
   public ApiResponse<ProjectFileDetailResponse> getFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
@@ -107,6 +114,10 @@ public class ProjectFileController {
   }
 
   @PutMapping("/{fileId}")
+  @Operation(
+      summary = "파일 현재 내용 저장",
+      description =
+          "파일의 현재 내용을 저장합니다. 저장 성공 시 editRevision은 증가하지만 currentVersion은 증가하지 않으며 FileVersion도 생성하지 않습니다.")
   public ApiResponse<FileSaveResponse> saveFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
