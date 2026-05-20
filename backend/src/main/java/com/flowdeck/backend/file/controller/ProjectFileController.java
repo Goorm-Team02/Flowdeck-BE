@@ -108,8 +108,9 @@ public class ProjectFileController {
   public ApiResponse<Void> deleteFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
-      @PathVariable Long fileId) {
-    projectFileService.deleteFile(projectId, authentication.getUserId(), fileId);
+      @PathVariable Long fileId,
+      @RequestParam Long expectedRevision) {
+    projectFileService.deleteFile(projectId, authentication.getUserId(), fileId, expectedRevision);
     return ApiResponse.success("파일 또는 폴더가 삭제되었습니다.", null);
   }
 

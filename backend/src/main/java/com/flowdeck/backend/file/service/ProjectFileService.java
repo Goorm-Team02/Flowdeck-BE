@@ -14,6 +14,7 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.version.dto.FileConflictResponse;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -152,13 +153,26 @@ public class ProjectFileService {
   }
 
   @Transactional
-  public void deleteFile(String projectId, Long userId, Long fileId) {
+  public void deleteFile(String projectId, Long userId, Long fileId, Long expectedRevision) {
     permissionService.validateEditor(projectId, userId);
 
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
 
+    validateExpectedRevision(file, expectedRevision);
+
     projectFileDeletionService.deleteRecursive(file);
+  }
+
+  private void validateExpectedRevision(ProjectFile file, Long expectedRevision) {
+    if (expectedRevision == null) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    if (file.getEditRevision() != expectedRevision) {
+      throw new BusinessException(
+          ErrorCode.FILE_EDIT_CONFLICT, FileConflictResponse.from(file, expectedRevision));
+    }
   }
 
   private Project getProject(String projectId) {

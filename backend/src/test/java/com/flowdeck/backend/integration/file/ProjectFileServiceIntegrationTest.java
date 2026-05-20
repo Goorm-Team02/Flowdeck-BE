@@ -1,12 +1,15 @@
 package com.flowdeck.backend.integration.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.file.service.ProjectFileService;
+import com.flowdeck.backend.global.error.BusinessException;
+import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
@@ -16,6 +19,7 @@ import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
+import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import com.flowdeck.testsupport.DatabaseIntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -103,7 +107,7 @@ class ProjectFileServiceIntegrationTest {
 
     Long fileId = file.getId();
 
-    projectFileService.deleteFile(project.getPublicId(), owner.getId(), fileId);
+    projectFileService.deleteFile(project.getPublicId(), owner.getId(), fileId, 0L);
 
     assertThat(projectFileRepository.findById(fileId)).isEmpty();
     assertThat(fileVersionRepository.existsByFileId(fileId)).isFalse();
@@ -125,10 +129,46 @@ class ProjectFileServiceIntegrationTest {
     Long folderId = folder.getId();
     Long fileId = file.getId();
 
-    projectFileService.deleteFile(project.getPublicId(), owner.getId(), folderId);
+    projectFileService.deleteFile(project.getPublicId(), owner.getId(), folderId, 0L);
 
     assertThat(projectFileRepository.findById(folderId)).isEmpty();
     assertThat(projectFileRepository.findById(fileId)).isEmpty();
     assertThat(fileVersionRepository.existsByFileId(fileId)).isFalse();
+  }
+
+  @Test
+  void deleteFileFailsWhenExpectedRevisionDoesNotMatchCurrentRevision() {
+    Project project =
+        projectRepository.save(
+            new Project("delete conflict project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("delete-conflict-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+    file.updateContent("current content");
+    file.increaseEditRevision();
+    projectFileRepository.save(file);
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                projectFileService.deleteFile(
+                    project.getPublicId(), owner.getId(), file.getId(), 0L));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FILE_EDIT_CONFLICT);
+    assertThat(exception.getData()).isInstanceOf(FileConflictResponse.class);
+
+    FileConflictResponse response = (FileConflictResponse) exception.getData();
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.baseRevision()).isZero();
+    assertThat(response.currentRevision()).isEqualTo(1);
+    assertThat(response.currentVersion()).isZero();
+    assertThat(response.latestContent()).isEqualTo("current content");
+    assertThat(projectFileRepository.findById(file.getId())).isPresent();
   }
 }
