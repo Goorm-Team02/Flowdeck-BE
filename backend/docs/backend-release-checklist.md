@@ -275,7 +275,8 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] `file.renamed` 이벤트 payload 확정
 - [ ] `file.moved` 이벤트 payload 확정
 - [ ] Editing Presence 상단 표시 UX 확정
-- [ ] Redis presence TTL / heartbeat 정책 확정
+- [x] Redis presence TTL / heartbeat 정책 확정
+  - 프로젝트 접속 presence TTL 30초, 클라이언트 heartbeat 10초 기준
 
 ---
 
@@ -301,7 +302,7 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] Swagger 운영 차단 정책 확정
 - [ ] 파일 크기 제한값 설정 분리
 - [x] Public 프로젝트 공개 범위 최종 확정
-- [ ] WebSocket presence Redis TTL 정책 확정
+- [x] WebSocket presence Redis TTL 정책 확정
 - [x] 파일 편집은 강제 lock 대신 Editing Presence 방향으로 결정
 - [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
 - [x] 파일 이벤트 WebSocket 발행 구현
