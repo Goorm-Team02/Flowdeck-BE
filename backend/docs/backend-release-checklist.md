@@ -146,9 +146,14 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] 파일 저장 요청에 `baseRevision` 포함
 - [x] 저장 성공 시 `editRevision` 증가
 - [x] 오래된 `baseRevision` 저장 시 `409 FILE_409` 응답
+- [x] 저장 충돌 응답에 `currentRevision`, `currentVersion`, `latestContent` 포함
 - [x] 1MB 초과 파일 저장 시 `FILE_400_3` 응답
 - [x] 명시적 버전 저장 시 `currentVersion` 증가
 - [x] 버전 복원 시 `currentContent`와 `editRevision` 갱신
+- [x] 오래된 `baseRevision` 복원 시 `409 FILE_409` 응답
+- [x] 파일 삭제 요청에 `expectedRevision` 포함
+- [x] 오래된 `expectedRevision` 삭제 시 `409 FILE_409` 응답
+- [x] 이름변경/이동은 `editRevision`을 증가시키지 않음
 
 ---
 
@@ -209,7 +214,23 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 버전 목록 조회
 - [ ] 버전 복원
 - [ ] 저장 충돌 409 확인
-- [ ] 동시 편집 중 오래된 baseRevision 저장 요청 차단 확인
+  - A가 파일 조회
+  - B가 같은 파일 저장
+  - A가 오래된 `baseRevision`으로 저장
+  - `409 FILE_409` 및 `currentRevision`, `latestContent` 포함 확인
+- [ ] 복원 충돌 409 확인
+  - A가 파일 조회
+  - B가 같은 파일 저장 또는 복원
+  - A가 오래된 `baseRevision`으로 버전 복원
+  - `409 FILE_409` 응답 확인
+- [ ] 삭제 충돌 409 확인
+  - A가 파일 조회
+  - B가 같은 파일 저장
+  - A가 오래된 `expectedRevision`으로 삭제
+  - `409 FILE_409` 응답 확인
+- [ ] 파일/폴더 이름변경 후 `editRevision`이 증가하지 않는지 확인
+- [ ] 파일/폴더 이동 후 `editRevision`이 증가하지 않는지 확인
+- [ ] 파일/폴더 삭제 후 파일 트리 갱신 확인
 - [ ] 파일 검색
 
 ### 채팅/WebSocket
@@ -219,6 +240,16 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 프로젝트 채팅 조회
 - [ ] 프로젝트 채팅 전송
 - [ ] 프로젝트 채널 권한 검증
+
+### 실시간 파일 협업 준비
+
+- [ ] `file.saved` 이벤트 payload 확정
+- [ ] `file.restored` 이벤트 payload 확정
+- [ ] `file.deleted` 이벤트 payload 확정
+- [ ] `file.renamed` 이벤트 payload 확정
+- [ ] `file.moved` 이벤트 payload 확정
+- [ ] Editing Presence 상단 표시 UX 확정
+- [ ] Redis presence TTL / heartbeat 정책 확정
 
 ---
 
@@ -243,7 +274,10 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 운영 profile 분리 강화
 - [ ] Swagger 운영 차단 정책 확정
 - [ ] 파일 크기 제한값 설정 분리
-- [ ] Public 프로젝트 공개 범위 최종 확정
+- [x] Public 프로젝트 공개 범위 최종 확정
 - [ ] WebSocket presence Redis TTL 정책 확정
-- [ ] 파일 편집 presence / soft lock 도입 여부 결정
+- [x] 파일 편집은 강제 lock 대신 Editing Presence 방향으로 결정
 - [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
+- [ ] 파일 이벤트 WebSocket 발행 구현
+- [ ] Editing Presence 구현
+- [ ] `metadataRevision` 또는 `treeRevision` 도입 여부 검토

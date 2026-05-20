@@ -4,6 +4,8 @@
 
 BE3 담당 영역인 WebSocket 파일 저장 알림, 채팅 LOG, 실시간 동기화는 이 문서 범위에서 제외합니다.
 
+파일 WebSocket 이벤트와 Editing Presence 계약은 `docs/realtime-file-collaboration-contract.md`에서 별도로 관리합니다.
+
 ---
 
 ## 1. 파일 상세 조회
