@@ -7,6 +7,7 @@ import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
+import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
@@ -141,6 +142,27 @@ class FileVersionServiceIntegrationTest {
                 fileVersionService.restoreVersion(
                     project.getPublicId(), viewer.getId(), file.getId(), version.getId()))
         .isInstanceOf(BusinessException.class);
+  }
+
+  @Test
+  void getVersionFailsWhenVersionDoesNotExist() {
+    Project project =
+        projectRepository.save(
+            new Project("missing version project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("missing-version-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+
+    assertThatThrownBy(
+            () ->
+                fileVersionService.getVersion(
+                    project.getPublicId(), owner.getId(), file.getId(), 999L))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.VERSION_NOT_FOUND);
   }
 
   private FileVersionCreateRequest createVersionRequest(String changeMessage) {

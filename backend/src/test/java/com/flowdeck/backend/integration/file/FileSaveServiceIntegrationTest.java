@@ -146,6 +146,29 @@ class FileSaveServiceIntegrationTest {
   }
 
   @Test
+  void saveFileFailsWhenTargetIsFolder() {
+    Project project =
+        projectRepository.save(
+            new Project("folder save project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("folder-save-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile folder =
+        projectFileRepository.save(new ProjectFile(project, null, "src", FileType.FOLDER));
+
+    assertThatThrownBy(
+            () ->
+                fileSaveService.saveFile(
+                    project.getPublicId(),
+                    owner.getId(),
+                    folder.getId(),
+                    createSaveRequest("class Main {}", 0L, "folder save")))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.FILE_INVALID_TYPE);
+  }
+
+  @Test
   void viewerCannotSaveFile() {
     Project project =
         projectRepository.save(
