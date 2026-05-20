@@ -37,13 +37,16 @@ public class ProjectController {
   }
 
   @GetMapping("/public")
-  public ApiResponse<ProjectListResponse> getPublicProjects() {
-    return ApiResponse.success(projectService.getPublicProjects());
+  public ApiResponse<ProjectListResponse> getPublicProjects(
+      @AuthenticationPrincipal JwtAuthentication authentication) {
+    return ApiResponse.success(projectService.getPublicProjects(authentication.getUserId()));
   }
 
   @GetMapping("/public/{projectId}")
-  public ApiResponse<ProjectResponse> getPublicProject(@PathVariable String projectId) {
-    return ApiResponse.success(projectService.getPublicProject(projectId));
+  public ApiResponse<ProjectResponse> getPublicProject(
+      @PathVariable String projectId, @AuthenticationPrincipal JwtAuthentication authentication) {
+    return ApiResponse.success(
+        projectService.getPublicProject(projectId, authentication.getUserId()));
   }
 
   @GetMapping("/{projectId}")

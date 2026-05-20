@@ -101,11 +101,12 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 체크:
 
 - [ ] 로그인 시 `auth:refresh:{userId}` 저장 확인
-- [ ] 로그아웃 시 `auth:blacklist:{token}` 저장 확인
+- [ ] 로그인 시 refresh token 원문이 아닌 SHA-256 해시 저장 확인
+- [ ] 로그아웃 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
 - [ ] 로그아웃 시 refresh token 삭제 확인
 - [ ] 멤버 권한 변경/탈퇴 시 `auth:force-logout:{userId}` 저장 확인
 - [ ] TTL이 의도한 시간으로 설정되는지 확인
-- [ ] Redis에 토큰 원문 저장 여부와 해시 저장 전환 필요성 검토
+- [x] Redis 토큰 원문 저장 제거 및 해시 저장 전환 반영
 
 ---
 
@@ -208,6 +209,7 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 버전 목록 조회
 - [ ] 버전 복원
 - [ ] 저장 충돌 409 확인
+- [ ] 동시 편집 중 오래된 baseRevision 저장 요청 차단 확인
 - [ ] 파일 검색
 
 ### 채팅/WebSocket
@@ -243,3 +245,5 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 파일 크기 제한값 설정 분리
 - [ ] Public 프로젝트 공개 범위 최종 확정
 - [ ] WebSocket presence Redis TTL 정책 확정
+- [ ] 파일 편집 presence / soft lock 도입 여부 결정
+- [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정

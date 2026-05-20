@@ -67,6 +67,27 @@ Web IDE에서는 사용자가 코드를 자주 저장할 가능성이 높기 때
 충돌 응답을 받으면 사용자가 최신 파일을 다시 불러오거나,
 자신의 변경 내용을 별도로 보존할 수 있는 UI를 제공해야 합니다.
 
+### CRDT 미도입에 따른 동시 편집 범위
+
+현재 MVP에서는 Yjs/CRDT 기반 실시간 코드 병합을 도입하지 않습니다.
+
+따라서 같은 파일을 여러 사용자가 동시에 열고 편집할 수는 있지만,
+서버는 저장 시점에 `baseRevision`과 `editRevision`을 비교해
+오래된 기준의 저장 요청을 `409 FILE_409`로 거부합니다.
+
+이 방식은 실시간 병합이나 편집 잠금을 제공하지는 않지만,
+다른 사용자의 변경 사항을 조용히 덮어쓰는 문제를 방지합니다.
+
+같은 파일을 누가 편집 중인지 표시하는 presence,
+파일 저장/복원 WebSocket 알림,
+저장 전 충돌 가능성 선제 경고는 후속 WebSocket 영역에서 검토합니다.
+
+먼저 편집한 사용자에게 우선권을 주는 lock 방식은
+낙관적 충돌 감지가 아니라 soft lock 또는 비관적 락 계열에 가깝습니다.
+
+해당 lock 정책은 Redis TTL, heartbeat, disconnect 처리, 프론트 UX 합의가 필요하므로
+현재 MVP 범위에서는 도입하지 않습니다.
+
 ---
 
 ## 3. 현재 파일 내용 저장 위치
@@ -239,8 +260,8 @@ Redis는 빠른 조회와 TTL 기반 임시 데이터에 적합하지만,
 
 ### 반영 내용
 
-- `auth:refresh:{userId}`: Refresh Token 저장
-- `auth:blacklist:{token}`: 로그아웃된 Access Token 차단
+- `auth:refresh:{userId}`: Refresh Token 해시 저장
+- `auth:blacklist:{sha256(accessToken)}`: 로그아웃된 Access Token 차단
 - `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 강제 로그아웃
 - `presence:project:{projectId}`: 프로젝트 접속자 상태 후보
 - `ws:session:{sessionId}`: WebSocket 세션 보조 후보
@@ -272,11 +293,11 @@ JWT에는 인증과 권한 검증에 필요한 최소 식별 정보만 포함합
 - 파일 원문
 - 프로젝트 상세 데이터
 
-### 운영 보완 후보
+### 토큰 저장 보안 반영
 
 현재 MVP에서는 Redis에 refresh token과 access token blacklist를 저장합니다.
 
-운영 보안을 더 강화하려면 토큰 원문 대신 해시 값을 저장하는 방식으로 전환할 수 있습니다.
+단, Redis에 토큰 원문을 저장하지 않기 위해 SHA-256 해시 값을 저장합니다.
 
 - `auth:blacklist:{accessToken}`
   → `auth:blacklist:{sha256(accessToken)}`
@@ -285,6 +306,12 @@ JWT에는 인증과 권한 검증에 필요한 최소 식별 정보만 포함합
   → `auth:refresh:{userId} -> sha256(refreshToken)`
 
 이 방식은 Redis key/value가 노출되더라도 토큰 원문 유출 위험을 줄일 수 있습니다.
+
+Refresh token 재발급 시에는 사용자가 제출한 refresh token을 같은 방식으로 해시한 뒤
+Redis에 저장된 해시 값과 비교합니다.
+
+Access token 로그아웃 차단 여부도 원문 access token을 그대로 key에 넣지 않고,
+해시 기반 blacklist key를 조회하는 방식으로 처리합니다.
 
 ---
 
