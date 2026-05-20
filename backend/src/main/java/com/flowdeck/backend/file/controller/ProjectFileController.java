@@ -70,6 +70,10 @@ public class ProjectFileController {
   }
 
   @GetMapping("/{fileId}")
+  @Operation(
+      summary = "파일 상세 조회",
+      description =
+          "파일 메타데이터와 현재 내용을 조회합니다. 응답의 content는 에디터 초기 내용으로, editRevision은 다음 저장 요청의 baseRevision으로 사용합니다.")
   public ApiResponse<ProjectFileDetailResponse> getFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,

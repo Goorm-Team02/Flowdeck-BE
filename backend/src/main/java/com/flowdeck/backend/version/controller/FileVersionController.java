@@ -33,6 +33,7 @@ public class FileVersionController {
   }
 
   @GetMapping
+  @Operation(summary = "파일 버전 목록 조회", description = "파일에 명시적으로 저장된 버전 목록을 최신 버전 순서로 조회합니다.")
   public ApiResponse<FileVersionListResponse> getVersions(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
@@ -57,6 +58,7 @@ public class FileVersionController {
   }
 
   @GetMapping("/{versionId}")
+  @Operation(summary = "파일 버전 상세 조회", description = "특정 파일 버전의 메타데이터와 저장된 코드 내용을 조회합니다.")
   public ApiResponse<FileVersionDetailResponse> getVersion(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
@@ -83,6 +85,9 @@ public class FileVersionController {
   }
 
   @GetMapping("/diff")
+  @Operation(
+      summary = "파일 버전 diff 조회",
+      description = "두 버전의 저장된 코드 내용을 비교해 추가/삭제/변경 라인 정보를 조회합니다. 코드 타임라인과 버전 비교 화면에서 사용합니다.")
   public ApiResponse<FileVersionDiffResponse> getDiff(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
