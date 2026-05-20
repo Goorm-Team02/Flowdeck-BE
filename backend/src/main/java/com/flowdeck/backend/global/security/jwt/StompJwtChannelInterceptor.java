@@ -1,6 +1,7 @@
 package com.flowdeck.backend.global.security.jwt;
 
 import com.flowdeck.backend.permission.service.PermissionService;
+import com.flowdeck.backend.presence.realtime.ProjectPresenceDestinations;
 import com.flowdeck.backend.projectmessage.realtime.ProjectMessageDestinations;
 import java.security.Principal;
 import java.util.List;
@@ -48,7 +49,7 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
     }
 
     if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-      validateProjectMessageSubscription(accessor);
+      validateProjectSubscription(accessor);
     }
 
     return message;
@@ -71,9 +72,13 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
         .contains(command);
   }
 
-  private void validateProjectMessageSubscription(StompHeaderAccessor accessor) {
-    String projectId =
-        ProjectMessageDestinations.extractProjectIdFromMessagesTopic(accessor.getDestination());
+  private void validateProjectSubscription(StompHeaderAccessor accessor) {
+    String destination = accessor.getDestination();
+    String projectId = ProjectMessageDestinations.extractProjectIdFromMessagesTopic(destination);
+    if (projectId == null) {
+      projectId = ProjectPresenceDestinations.extractProjectIdFromPresenceTopic(destination);
+    }
+
     if (projectId == null) {
       return;
     }
