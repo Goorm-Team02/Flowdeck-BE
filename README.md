@@ -26,53 +26,25 @@
 - 로컬 DB는 `docker compose -f docker-compose.dev.yaml up -d`로 실행
 - 예시 환경 변수 : `.env.example`
 
-## Docker 배포 이미지
+## 정적 Swagger 문서 배포
 
-- 백엔드 이미지는 `backend/Dockerfile` 기준으로 빌드
-- 기본 실행 프로필은 `dev`, 운영 배포 시에는 `SPRING_PROFILES_ACTIVE=prod`로 덮어쓰기
+- 프론트 공유용 문서는 GitHub Pages 기준으로 배포합니다.
+- 페이지 엔트리는 [`docs/index.html`](docs/index.html) 이고, `develop` 기준 OpenAPI 문서는 워크플로에서 `docs/openapi.json` 으로 생성합니다.
+- `Try it out` 은 정적 문서 배포에서 혼선을 줄이기 위해 비활성화했습니다.
 
-```bash
-docker build -f backend/Dockerfile -t flowdeck-backend:dev backend
-```
+배포 방식:
 
-```bash
-docker run --rm -p 8080:8080 \
-  -e SPRING_PROFILES_ACTIVE=dev \
-  -e DB_URL=jdbc:postgresql://host.docker.internal:5432/flowdeck \
-  -e DB_USERNAME=flowdeck \
-  -e DB_PASSWORD=flowdeck \
-  -e REDIS_HOST=host.docker.internal \
-  -e REDIS_PORT=6379 \
-  -e JWT_SECRET=change-me \
-  flowdeck-backend:dev
-```
+1. `develop` 브랜치에 머지
+2. [`Swagger Docs Pages`](.github/workflows/swagger-docs-pages.yml) 워크플로 실행
+3. 테스트 컨텍스트에서 `/v3/api-docs` 를 생성
+4. `docs/` 아티팩트를 GitHub Pages에 배포
 
-## develop 자동배포
+확인 주소:
 
-- `.github/workflows/deploy-dev.yml` 은 `develop` 브랜치의 `Backend CI`가 성공하면 실행
-- 워크플로는 GHCR에 dev 이미지를 푸시한 뒤, SSH로 dev 서버에 접속해 `docker compose up -d`로 갱신
-- dev 서버에는 `backend/docker-compose.dev.yaml` 이 배포되며, 실제 애플리케이션 비밀값은 서버의 `${DEV_APP_DIR}/.env` 에 둠
+- `https://<org-or-user>.github.io/<repo>/`
+- 예: `https://goorm-team02.github.io/Flowdeck-BE/`
 
-필요한 GitHub Actions `dev` 환경 변수:
+주의:
 
-- `DEV_SERVER_HOST`
-- `DEV_SERVER_PORT`
-- `DEV_SERVER_USER`
-- `DEV_APP_DIR`
-
-필요한 GitHub Actions `dev` 환경 시크릿:
-
-- `DEV_SERVER_SSH_KEY`
-- `DEV_SERVER_KNOWN_HOSTS`
-- `DEV_GHCR_USERNAME`
-- `DEV_GHCR_TOKEN`
-
-dev 서버의 `${DEV_APP_DIR}/.env` 에는 최소한 아래 값이 있어야 함:
-
-- `DB_URL`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `JWT_SECRET`
-- 선택값: `BACKEND_PORT`, `JAVA_OPTS`, `SPRING_PROFILES_ACTIVE`
+- 이 방식은 문서 확인용입니다.
+- 실제 API 호출, DB/Redis 연동, WebSocket 검증은 포함하지 않습니다.

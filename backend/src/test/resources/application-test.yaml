@@ -17,6 +17,3 @@ app:
   jpa:
     auditing:
       enabled: true
-  security:
-    jwt:
-      secret: flowdeck-test-jwt-secret-key-change-me-now-123456
