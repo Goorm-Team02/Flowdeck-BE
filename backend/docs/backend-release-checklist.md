@@ -154,6 +154,11 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] 파일 삭제 요청에 `expectedRevision` 포함
 - [x] 오래된 `expectedRevision` 삭제 시 `409 FILE_409` 응답
 - [x] 이름변경/이동은 `editRevision`을 증가시키지 않음
+- [x] 파일 상세 조회 성공 응답 프론트 필드 검증
+- [x] 파일 저장 성공 응답 프론트 필드 검증
+- [x] 명시적 버전 저장 성공 응답 프론트 필드 검증
+- [x] 버전 복원 성공 응답 프론트 필드 검증
+- [x] 주요 파일 API 에러 코드 HTTP 응답 검증
 
 ---
 
@@ -209,10 +214,17 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 파일 생성
 - [ ] 폴더 생성
 - [ ] 파일 상세 조회
+  - `content`가 에디터 초기 내용으로 표시되는지 확인
+  - `editRevision`을 저장 요청의 `baseRevision`으로 보관하는지 확인
 - [ ] 현재 내용 저장
+  - 저장 성공 후 `editRevision`이 갱신되는지 확인
+  - 저장 성공 후 `currentVersion`이 증가하지 않는지 확인
 - [ ] 명시적 버전 저장
+  - 버전 저장 성공 후 `currentVersion`이 증가하는지 확인
+  - 버전 저장 성공 후 `editRevision`이 증가하지 않는지 확인
 - [ ] 버전 목록 조회
 - [ ] 버전 복원
+  - 복원 성공 후 `currentVersion`과 `editRevision`이 모두 갱신되는지 확인
 - [ ] 저장 충돌 409 확인
   - A가 파일 조회
   - B가 같은 파일 저장
@@ -232,6 +244,20 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 파일/폴더 이동 후 `editRevision`이 증가하지 않는지 확인
 - [ ] 파일/폴더 삭제 후 파일 트리 갱신 확인
 - [ ] 파일 검색
+
+### 프론트 에러 분기
+
+- [ ] `FILE_409` 저장/복원/삭제 충돌 모달 표시
+- [ ] `FILE_409_1` 파일명 중복 안내
+- [ ] `FILE_400` 파일/폴더 타입 오류 안내
+- [ ] `FILE_400_1` 검색어 오류 안내
+- [ ] `FILE_400_2` 이동 불가 안내
+- [ ] `FILE_400_3` 파일 크기 초과 안내
+- [ ] `FILE_404` 파일 없음 안내 및 파일 트리 새로고침
+- [ ] `VERSION_404` 버전 없음 안내 및 버전 목록 새로고침
+- [ ] `COMMON_400` 필수 요청값 누락 안내
+- [ ] `AUTH_401` 로그인 또는 토큰 재발급 흐름
+- [ ] `AUTH_403` 권한 부족 안내
 
 ### 채팅/WebSocket
 
