@@ -3,17 +3,22 @@ package com.flowdeck.backend.file.service;
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.dto.ProjectFileCreateRequest;
 import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
+import com.flowdeck.backend.file.dto.ProjectFileEventResponse;
 import com.flowdeck.backend.file.dto.ProjectFileMoveRequest;
 import com.flowdeck.backend.file.dto.ProjectFileRenameRequest;
 import com.flowdeck.backend.file.dto.ProjectFileResponse;
 import com.flowdeck.backend.file.dto.ProjectFileSearchResponse;
 import com.flowdeck.backend.file.dto.ProjectFileTreeResponse;
+import com.flowdeck.backend.file.realtime.ProjectFileBroadcaster;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.user.domain.User;
+import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -29,16 +34,25 @@ public class ProjectFileService {
   private final ProjectFileRepository projectFileRepository;
   private final ProjectFileDeletionService projectFileDeletionService;
   private final PermissionService permissionService;
+  private final UserRepository userRepository;
+  private final ProjectFileBroadcaster projectFileBroadcaster;
+  private final AfterCommitExecutor afterCommitExecutor;
 
   public ProjectFileService(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       ProjectFileDeletionService projectFileDeletionService,
-      PermissionService permissionService) {
+      PermissionService permissionService,
+      UserRepository userRepository,
+      ProjectFileBroadcaster projectFileBroadcaster,
+      AfterCommitExecutor afterCommitExecutor) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
     this.projectFileDeletionService = projectFileDeletionService;
     this.permissionService = permissionService;
+    this.userRepository = userRepository;
+    this.projectFileBroadcaster = projectFileBroadcaster;
+    this.afterCommitExecutor = afterCommitExecutor;
   }
 
   @Transactional
@@ -129,10 +143,16 @@ public class ProjectFileService {
 
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
+    String oldName = file.getName();
 
     validateDuplicateName(project, file.getParent(), request.getName());
 
     file.rename(request.getName());
+    afterCommitExecutor.run(
+        () ->
+            projectFileBroadcaster.broadcast(
+                ProjectFileEventResponse.renamed(
+                    projectId, file, userId, getActorName(userId), oldName)));
     return ProjectFileResponse.from(file);
   }
 
@@ -143,12 +163,18 @@ public class ProjectFileService {
 
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
+    Long oldParentId = file.getParent() == null ? null : file.getParent().getId();
     ProjectFile newParent = getParent(project, request.getParentId());
 
     validateMoveTarget(file, newParent);
     validateDuplicateName(project, newParent, file.getName());
 
     file.move(newParent);
+    afterCommitExecutor.run(
+        () ->
+            projectFileBroadcaster.broadcast(
+                ProjectFileEventResponse.moved(
+                    projectId, file, userId, getActorName(userId), oldParentId)));
     return ProjectFileResponse.from(file);
   }
 
@@ -161,7 +187,13 @@ public class ProjectFileService {
 
     validateExpectedRevision(file, expectedRevision);
 
+    List<Long> deletedFileIds = projectFileDeletionService.collectDeletedFileIds(file);
     projectFileDeletionService.deleteRecursive(file);
+    afterCommitExecutor.run(
+        () ->
+            projectFileBroadcaster.broadcast(
+                ProjectFileEventResponse.deleted(
+                    projectId, file, userId, getActorName(userId), deletedFileIds)));
   }
 
   private void validateExpectedRevision(ProjectFile file, Long expectedRevision) {
@@ -227,5 +259,13 @@ public class ProjectFileService {
       }
       current = current.getParent();
     }
+  }
+
+  private String getActorName(Long userId) {
+    User user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+    return user.getName();
   }
 }

@@ -4,6 +4,7 @@ import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -41,5 +42,20 @@ public class ProjectFileDeletionService {
     }
 
     projectFileRepository.delete(file);
+  }
+
+  public List<Long> collectDeletedFileIds(ProjectFile file) {
+    List<Long> deletedFileIds = new ArrayList<>();
+    collectDeletedFileIds(file, deletedFileIds);
+    return deletedFileIds;
+  }
+
+  private void collectDeletedFileIds(ProjectFile file, List<Long> deletedFileIds) {
+    deletedFileIds.add(file.getId());
+
+    List<ProjectFile> children = projectFileRepository.findAllByParent(file);
+    for (ProjectFile child : children) {
+      collectDeletedFileIds(child, deletedFileIds);
+    }
   }
 }

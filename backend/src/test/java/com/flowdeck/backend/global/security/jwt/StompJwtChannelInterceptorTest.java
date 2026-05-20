@@ -38,8 +38,17 @@ class StompJwtChannelInterceptorTest {
   }
 
   @Test
-  void subscribeToNonMessageDestinationSkipsProjectAccessValidation() {
+  void subscribeToProjectFilesValidatesProjectAccess() {
     Message<?> message = subscribeMessage("/topic/projects/project-123/files", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verify(permissionService).validateProjectAccess("project-123", 7L);
+  }
+
+  @Test
+  void subscribeToNonProjectDestinationSkipsProjectAccessValidation() {
+    Message<?> message = subscribeMessage("/topic/system/health", 7L);
 
     interceptor.preSend(message, mock(MessageChannel.class));
 
