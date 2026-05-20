@@ -20,14 +20,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
 @Transactional
-class ProjectAccessIntegrationTest {
+class ProjectAccessTest {
 
   private final ProjectRepository projectRepository;
   private final ProjectService projectService;
   private final UserRepository userRepository;
 
   @Autowired
-  ProjectAccessIntegrationTest(
+  ProjectAccessTest(
       ProjectRepository projectRepository,
       ProjectService projectService,
       UserRepository userRepository) {

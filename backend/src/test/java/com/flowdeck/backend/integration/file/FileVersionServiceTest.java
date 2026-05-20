@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
 @Transactional
-class FileVersionServiceIntegrationTest {
+class FileVersionServiceTest {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -44,7 +44,7 @@ class FileVersionServiceIntegrationTest {
   private final ProjectMemberRepository projectMemberRepository;
 
   @Autowired
-  FileVersionServiceIntegrationTest(
+  FileVersionServiceTest(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       FileVersionRepository fileVersionRepository,
