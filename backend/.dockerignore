@@ -1,0 +1,7 @@
+.gradle
+.idea
+build
+docs
+src/test
+HELP.md
+*.iml
