@@ -73,7 +73,7 @@ public class FileVersionController {
   @Operation(
       summary = "파일 버전 복원",
       description =
-          "선택한 버전의 내용을 현재 파일 내용으로 복원하고, 복원 이력을 새 버전으로 저장합니다. 성공 시 currentVersion과 editRevision이 모두 증가합니다.")
+          "선택한 버전의 내용을 현재 파일 내용으로 복원하고, 복원 이력을 새 버전으로 저장합니다. 요청의 baseRevision이 현재 editRevision과 같을 때만 복원합니다. 성공 시 currentVersion과 editRevision이 모두 증가합니다. baseRevision이 다르면 FILE_409와 FileConflictResponse를 반환합니다.")
   public ApiResponse<FileVersionRestoreResponse> restoreVersion(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,

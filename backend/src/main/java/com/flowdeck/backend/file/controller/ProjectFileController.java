@@ -14,6 +14,7 @@ import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
 import com.flowdeck.backend.version.service.FileSaveService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -105,10 +106,15 @@ public class ProjectFileController {
   }
 
   @DeleteMapping("/{fileId}")
+  @Operation(
+      summary = "파일 또는 폴더 삭제",
+      description =
+          "파일 또는 폴더를 삭제합니다. expectedRevision은 삭제 대상의 현재 editRevision과 비교되며, 다르면 FILE_409 충돌 응답을 반환합니다. 폴더 삭제 시 MVP 기준 하위 파일 전체 revision은 검사하지 않습니다.")
   public ApiResponse<Void> deleteFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
       @PathVariable Long fileId,
+      @Parameter(description = "삭제 대상 파일/폴더를 조회했을 때 받은 editRevision 값", example = "5")
       @RequestParam Long expectedRevision) {
     projectFileService.deleteFile(projectId, authentication.getUserId(), fileId, expectedRevision);
     return ApiResponse.success("파일 또는 폴더가 삭제되었습니다.", null);
@@ -118,7 +124,7 @@ public class ProjectFileController {
   @Operation(
       summary = "파일 현재 내용 저장",
       description =
-          "파일의 현재 내용을 저장합니다. 저장 성공 시 editRevision은 증가하지만 currentVersion은 증가하지 않으며 FileVersion도 생성하지 않습니다.")
+          "파일의 현재 내용을 저장합니다. 요청의 baseRevision이 현재 editRevision과 같을 때만 저장합니다. 저장 성공 시 editRevision은 증가하지만 currentVersion은 증가하지 않으며 FileVersion도 생성하지 않습니다. baseRevision이 다르면 FILE_409와 FileConflictResponse를 반환합니다.")
   public ApiResponse<FileSaveResponse> saveFile(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
