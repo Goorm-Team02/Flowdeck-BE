@@ -46,3 +46,33 @@ docker run --rm -p 8080:8080 \
   -e JWT_SECRET=change-me \
   flowdeck-backend:dev
 ```
+
+## develop 자동배포
+
+- `.github/workflows/deploy-dev.yml` 은 `develop` 브랜치의 `Backend CI`가 성공하면 실행
+- 워크플로는 GHCR에 dev 이미지를 푸시한 뒤, SSH로 dev 서버에 접속해 `docker compose up -d`로 갱신
+- dev 서버에는 `backend/docker-compose.dev.yaml` 이 배포되며, 실제 애플리케이션 비밀값은 서버의 `${DEV_APP_DIR}/.env` 에 둠
+
+필요한 GitHub Actions `dev` 환경 변수:
+
+- `DEV_SERVER_HOST`
+- `DEV_SERVER_PORT`
+- `DEV_SERVER_USER`
+- `DEV_APP_DIR`
+
+필요한 GitHub Actions `dev` 환경 시크릿:
+
+- `DEV_SERVER_SSH_KEY`
+- `DEV_SERVER_KNOWN_HOSTS`
+- `DEV_GHCR_USERNAME`
+- `DEV_GHCR_TOKEN`
+
+dev 서버의 `${DEV_APP_DIR}/.env` 에는 최소한 아래 값이 있어야 함:
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `JWT_SECRET`
+- 선택값: `BACKEND_PORT`, `JAVA_OPTS`, `SPRING_PROFILES_ACTIVE`

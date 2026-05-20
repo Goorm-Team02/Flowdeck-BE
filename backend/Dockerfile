@@ -15,6 +15,12 @@ FROM eclipse-temurin:21-jre-jammy AS runtime
 
 WORKDIR /app
 
+ARG SOURCE_REPOSITORY=""
+ARG VCS_REF=""
+
+LABEL org.opencontainers.image.source=$SOURCE_REPOSITORY
+LABEL org.opencontainers.image.revision=$VCS_REF
+
 RUN groupadd --system spring \
     && useradd --system --gid spring --create-home spring
 
