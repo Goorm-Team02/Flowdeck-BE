@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -60,6 +61,13 @@ public class GlobalExceptionHandler {
       HttpMessageNotReadableException exception) {
     return ResponseEntity.status(ErrorCode.INVALID_REQUEST_BODY.getHttpStatus())
         .body(ApiResponse.failure(ErrorCode.INVALID_REQUEST_BODY));
+  }
+
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameter(
+      MissingServletRequestParameterException exception) {
+    return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getHttpStatus())
+        .body(ApiResponse.failure(ErrorCode.INVALID_INPUT_VALUE));
   }
 
   @ExceptionHandler(AccessDeniedException.class)

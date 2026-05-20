@@ -155,6 +155,23 @@ class FileConflictResponseControllerIntegrationTest {
         .andExpect(jsonPath("$.data.latestContent").value("class Main {}"));
   }
 
+  @Test
+  void deleteFileWithoutExpectedRevisionReturnsBadRequest() throws Exception {
+    TestFixture fixture = createFixture();
+
+    mockMvc
+        .perform(
+            delete(
+                    "/api/projects/{projectId}/files/{fileId}",
+                    fixture.project().getPublicId(),
+                    fixture.file().getId())
+                .header(AUTHORIZATION, bearerToken(fixture.user().getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("COMMON_400"))
+        .andExpect(jsonPath("$.data").doesNotExist());
+  }
+
   private TestFixture createFixture() {
     Project project =
         projectRepository.save(
