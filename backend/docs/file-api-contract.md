@@ -100,7 +100,13 @@ Ctrl+S 또는 일반 저장 시 현재 작업 내용을 저장합니다.
   "success": false,
   "code": "FILE_409",
   "message": "파일이 다른 사용자에 의해 수정되었습니다.",
-  "data": null
+  "data": {
+    "fileId": 1,
+    "baseRevision": 4,
+    "currentRevision": 5,
+    "currentVersion": 2,
+    "latestContent": "public class Main {}"
+  }
 }
 ```
 
@@ -115,6 +121,14 @@ Ctrl+S 또는 일반 저장 시 현재 작업 내용을 저장합니다.
 - 충돌 안내 모달을 보여줍니다.
 - 사용자가 최신 내용을 다시 불러올 수 있게 합니다.
 - 현재 작성 중인 내용을 보존할 UX는 프론트에서 별도 결정합니다.
+
+### Conflict data
+
+- `fileId`: 충돌이 발생한 파일 ID입니다.
+- `baseRevision`: 클라이언트가 요청에 담아 보낸 기준 revision입니다.
+- `currentRevision`: 서버에 저장된 현재 `editRevision`입니다.
+- `currentVersion`: 현재 명시적 버전 번호입니다.
+- `latestContent`: 서버에 저장된 최신 파일 내용입니다.
 
 ### 동시 편집 범위
 
@@ -177,6 +191,14 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 특정 버전의 내용을 현재 파일 내용으로 복원합니다.
 
+### Request
+
+```json
+{
+  "baseRevision": 5
+}
+```
+
 ### Response data
 
 ```json
@@ -191,6 +213,8 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ### 동작
 
+- `baseRevision`이 현재 파일의 `editRevision`과 같으면 복원합니다.
+- `baseRevision`이 현재 파일의 `editRevision`과 다르면 `FILE_409` 충돌 응답을 반환합니다.
 - 선택한 버전의 `content`를 `currentContent`에 반영합니다.
 - 복원 이력을 새 `FileVersion`으로 저장합니다.
 - `currentVersion`을 1 증가시킵니다.
@@ -198,7 +222,54 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ---
 
-## 6. 운영 DB 마이그레이션 주의사항
+## 6. 파일 삭제
+
+```http
+DELETE /api/projects/{projectId}/files/{fileId}?expectedRevision=5
+```
+
+### 목적
+
+파일 또는 폴더를 삭제합니다.
+
+폴더 삭제 시 하위 파일/폴더와 연결된 버전 데이터도 함께 삭제합니다.
+
+### 동작
+
+- `expectedRevision`은 삭제 대상 파일/폴더의 현재 `editRevision`과 비교합니다.
+- `expectedRevision`이 현재 `editRevision`과 같으면 삭제합니다.
+- `expectedRevision`이 현재 `editRevision`과 다르면 `FILE_409` 충돌 응답을 반환합니다.
+- MVP 기준으로 폴더 삭제 시 하위 파일 전체 revision은 검사하지 않습니다.
+- 하위 파일 편집 중 삭제 위험은 후속 WebSocket 알림과 Editing Presence로 보완합니다.
+
+---
+
+## 7. 파일 이름변경 / 이동
+
+파일 이름변경과 이동은 파일 내용 변경이 아니라 파일 트리/메타데이터 변경으로 분류합니다.
+
+MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않습니다.
+
+`editRevision`은 파일 내용 저장과 버전 복원처럼 `currentContent`가 바뀌는 작업의 충돌 감지에 사용합니다.
+
+따라서 프론트는 이름변경/이동 성공 응답을 기준으로 현재 파일 트리를 갱신합니다.
+
+다른 사용자가 보고 있는 파일 트리 갱신은 후속 WebSocket 이벤트로 보완합니다.
+
+후속 후보 이벤트:
+
+- `file.renamed`
+- `file.moved`
+- `file.deleted`
+- `file.restored`
+- `file.saved`
+
+파일 트리 변경 충돌을 더 엄격하게 다룰 필요가 생기면
+`metadataRevision` 또는 `treeRevision` 도입을 검토합니다.
+
+---
+
+## 8. 운영 DB 마이그레이션 주의사항
 
 현재 MVP 개발 환경에서는 JPA `ddl-auto` 기준으로 컬럼이 반영될 수 있습니다.
 
@@ -226,12 +297,13 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ---
 
-## 7. 추후 검토 항목
+## 9. 추후 검토 항목
 
-- 충돌 응답에 서버 최신 `editRevision`과 최신 `content`를 포함할지 여부
 - 프론트 충돌 모달 UX
 - 편집 presence 및 파일 저장/복원 WebSocket 알림
 - 파일 편집 lock 또는 soft lock 도입 여부
+- 파일 트리 변경 WebSocket 이벤트 payload
+- `metadataRevision` 또는 `treeRevision` 도입 여부
 - 자동 저장 on/off 정책
 - WebSocket 파일 저장/복원 알림 payload
 - `FileVersion publicId` 도입 여부

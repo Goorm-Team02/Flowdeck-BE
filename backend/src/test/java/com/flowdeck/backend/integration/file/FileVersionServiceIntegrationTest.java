@@ -2,6 +2,7 @@ package com.flowdeck.backend.integration.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
@@ -17,8 +18,10 @@ import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
+import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
+import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import com.flowdeck.backend.version.service.FileVersionService;
@@ -104,7 +107,11 @@ class FileVersionServiceIntegrationTest {
 
     FileVersionRestoreResponse response =
         fileVersionService.restoreVersion(
-            project.getPublicId(), owner.getId(), file.getId(), firstVersion.getId());
+            project.getPublicId(),
+            owner.getId(),
+            file.getId(),
+            firstVersion.getId(),
+            createRestoreRequest(0L));
 
     List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberDesc(file);
 
@@ -119,6 +126,49 @@ class FileVersionServiceIntegrationTest {
     assertThat(versions.get(0).getContent()).isEqualTo("v1 content");
     assertThat(versions.get(1).getContent()).isEqualTo("v2 content");
     assertThat(versions.get(2).getContent()).isEqualTo("v1 content");
+  }
+
+  @Test
+  void restoreVersionFailsWhenBaseRevisionDoesNotMatchCurrentRevision() {
+    Project project =
+        projectRepository.save(
+            new Project("restore conflict project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("restore-conflict-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+
+    file.updateContent("current content");
+    file.increaseEditRevision();
+    file.increaseVersion();
+    FileVersion version =
+        fileVersionRepository.save(
+            new FileVersion(file, owner.getId(), 1, "v1 content", "first save"));
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                fileVersionService.restoreVersion(
+                    project.getPublicId(),
+                    owner.getId(),
+                    file.getId(),
+                    version.getId(),
+                    createRestoreRequest(0L)));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FILE_EDIT_CONFLICT);
+    assertThat(exception.getData()).isInstanceOf(FileConflictResponse.class);
+
+    FileConflictResponse response = (FileConflictResponse) exception.getData();
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.baseRevision()).isZero();
+    assertThat(response.currentRevision()).isEqualTo(1);
+    assertThat(response.currentVersion()).isEqualTo(1);
+    assertThat(response.latestContent()).isEqualTo("current content");
   }
 
   @Test
@@ -140,7 +190,11 @@ class FileVersionServiceIntegrationTest {
     assertThatThrownBy(
             () ->
                 fileVersionService.restoreVersion(
-                    project.getPublicId(), viewer.getId(), file.getId(), version.getId()))
+                    project.getPublicId(),
+                    viewer.getId(),
+                    file.getId(),
+                    version.getId(),
+                    createRestoreRequest(0L)))
         .isInstanceOf(BusinessException.class);
   }
 
@@ -168,6 +222,12 @@ class FileVersionServiceIntegrationTest {
   private FileVersionCreateRequest createVersionRequest(String changeMessage) {
     FileVersionCreateRequest request = new FileVersionCreateRequest();
     ReflectionTestUtils.setField(request, "changeMessage", changeMessage);
+    return request;
+  }
+
+  private FileVersionRestoreRequest createRestoreRequest(Long baseRevision) {
+    FileVersionRestoreRequest request = new FileVersionRestoreRequest();
+    ReflectionTestUtils.setField(request, "baseRevision", baseRevision);
     return request;
   }
 }

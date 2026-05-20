@@ -2,6 +2,7 @@ package com.flowdeck.backend.integration.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
@@ -17,6 +18,7 @@ import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
+import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileSaveRequest;
 import com.flowdeck.backend.version.dto.FileSaveResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
@@ -108,16 +110,27 @@ class FileSaveServiceIntegrationTest {
         file.getId(),
         createSaveRequest("class Main {}", 0L, "first save"));
 
-    assertThatThrownBy(
+    Throwable throwable =
+        catchThrowable(
             () ->
                 fileSaveService.saveFile(
                     project.getPublicId(),
                     owner.getId(),
                     file.getId(),
-                    createSaveRequest("stale content", 0L, "stale save")))
-        .isInstanceOf(BusinessException.class)
-        .extracting("errorCode")
-        .isEqualTo(ErrorCode.FILE_EDIT_CONFLICT);
+                    createSaveRequest("stale content", 0L, "stale save")));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FILE_EDIT_CONFLICT);
+    assertThat(exception.getData()).isInstanceOf(FileConflictResponse.class);
+
+    FileConflictResponse response = (FileConflictResponse) exception.getData();
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.baseRevision()).isZero();
+    assertThat(response.currentRevision()).isEqualTo(1);
+    assertThat(response.currentVersion()).isZero();
+    assertThat(response.latestContent()).isEqualTo("class Main {}");
   }
 
   @Test

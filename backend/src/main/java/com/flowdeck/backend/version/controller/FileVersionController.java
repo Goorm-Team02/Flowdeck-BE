@@ -7,6 +7,7 @@ import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
 import com.flowdeck.backend.version.dto.FileVersionListResponse;
+import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.service.FileVersionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,11 +78,12 @@ public class FileVersionController {
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
       @PathVariable Long fileId,
-      @PathVariable Long versionId) {
+      @PathVariable Long versionId,
+      @Valid @RequestBody FileVersionRestoreRequest request) {
     return ApiResponse.success(
         "파일 버전이 복원되었습니다.",
         fileVersionService.restoreVersion(
-            projectId, authentication.getUserId(), fileId, versionId));
+            projectId, authentication.getUserId(), fileId, versionId, request));
   }
 
   @GetMapping("/diff")

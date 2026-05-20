@@ -9,12 +9,14 @@ import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
+import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
 import com.flowdeck.backend.version.dto.FileVersionListResponse;
 import com.flowdeck.backend.version.dto.FileVersionResponse;
+import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
@@ -88,11 +90,20 @@ public class FileVersionService {
 
   @Transactional
   public FileVersionRestoreResponse restoreVersion(
-      String projectId, Long userId, Long fileId, Long versionId) {
+      String projectId,
+      Long userId,
+      Long fileId,
+      Long versionId,
+      FileVersionRestoreRequest request) {
     permissionService.validateEditor(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
     FileVersion version = getFileVersion(file, versionId);
+
+    if (file.getEditRevision() != request.getBaseRevision()) {
+      throw new BusinessException(
+          ErrorCode.FILE_EDIT_CONFLICT, FileConflictResponse.from(file, request.getBaseRevision()));
+    }
 
     file.updateContent(version.getContent());
     file.increaseEditRevision();
