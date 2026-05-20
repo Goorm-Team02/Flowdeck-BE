@@ -198,7 +198,32 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ---
 
-## 6. 운영 DB 마이그레이션 주의사항
+## 6. 파일 이름변경 / 이동
+
+파일 이름변경과 이동은 파일 내용 변경이 아니라 파일 트리/메타데이터 변경으로 분류합니다.
+
+MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않습니다.
+
+`editRevision`은 파일 내용 저장과 버전 복원처럼 `currentContent`가 바뀌는 작업의 충돌 감지에 사용합니다.
+
+따라서 프론트는 이름변경/이동 성공 응답을 기준으로 현재 파일 트리를 갱신합니다.
+
+다른 사용자가 보고 있는 파일 트리 갱신은 후속 WebSocket 이벤트로 보완합니다.
+
+후속 후보 이벤트:
+
+- `file.renamed`
+- `file.moved`
+- `file.deleted`
+- `file.restored`
+- `file.saved`
+
+파일 트리 변경 충돌을 더 엄격하게 다룰 필요가 생기면
+`metadataRevision` 또는 `treeRevision` 도입을 검토합니다.
+
+---
+
+## 7. 운영 DB 마이그레이션 주의사항
 
 현재 MVP 개발 환경에서는 JPA `ddl-auto` 기준으로 컬럼이 반영될 수 있습니다.
 
@@ -226,12 +251,14 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ---
 
-## 7. 추후 검토 항목
+## 8. 추후 검토 항목
 
 - 충돌 응답에 서버 최신 `editRevision`과 최신 `content`를 포함할지 여부
 - 프론트 충돌 모달 UX
 - 편집 presence 및 파일 저장/복원 WebSocket 알림
 - 파일 편집 lock 또는 soft lock 도입 여부
+- 파일 트리 변경 WebSocket 이벤트 payload
+- `metadataRevision` 또는 `treeRevision` 도입 여부
 - 자동 저장 on/off 정책
 - WebSocket 파일 저장/복원 알림 payload
 - `FileVersion publicId` 도입 여부
