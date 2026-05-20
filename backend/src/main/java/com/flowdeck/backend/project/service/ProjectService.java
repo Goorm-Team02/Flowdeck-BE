@@ -89,7 +89,9 @@ public class ProjectService {
   }
 
   @Transactional(readOnly = true)
-  public ProjectListResponse getPublicProjects() {
+  public ProjectListResponse getPublicProjects(Long userId) {
+    validateAuthenticatedUser(userId);
+
     List<ProjectResponse> projects =
         projectRepository.findAllByVisibilityOrderByCreatedAtDesc(ProjectVisibility.PUBLIC).stream()
             .map(ProjectResponse::from)
@@ -99,7 +101,9 @@ public class ProjectService {
   }
 
   @Transactional(readOnly = true)
-  public ProjectResponse getPublicProject(String projectId) {
+  public ProjectResponse getPublicProject(String projectId, Long userId) {
+    validateAuthenticatedUser(userId);
+
     Project project = getProjectByPublicId(projectId);
 
     if (project.getVisibility() != ProjectVisibility.PUBLIC) {
@@ -113,5 +117,11 @@ public class ProjectService {
     return projectRepository
         .findByPublicId(projectId)
         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+  }
+
+  private void validateAuthenticatedUser(Long userId) {
+    if (!userRepository.existsById(userId)) {
+      throw new BusinessException(ErrorCode.UNAUTHORIZED);
+    }
   }
 }
