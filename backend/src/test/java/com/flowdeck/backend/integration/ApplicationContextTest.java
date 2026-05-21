@@ -12,12 +12,12 @@ import org.springframework.context.ApplicationContext;
 
 /** H2 기반 전체 애플리케이션 컨텍스트에서 웹 계층과 영속성 계층이 함께 연결되는지 검증한다. */
 @DatabaseIntegrationTest
-class ApplicationContextIntegrationTest {
+class ApplicationContextTest {
 
   private final ApplicationContext applicationContext;
 
   @Autowired
-  ApplicationContextIntegrationTest(ApplicationContext applicationContext) {
+  ApplicationContextTest(ApplicationContext applicationContext) {
     this.applicationContext = applicationContext;
   }
 

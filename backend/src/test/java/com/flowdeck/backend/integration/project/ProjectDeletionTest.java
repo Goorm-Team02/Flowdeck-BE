@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
 @Transactional
-class ProjectDeletionIntegrationTest {
+class ProjectDeletionTest {
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -33,7 +33,7 @@ class ProjectDeletionIntegrationTest {
   private final ProjectMemberRepository projectMemberRepository;
 
   @Autowired
-  ProjectDeletionIntegrationTest(
+  ProjectDeletionTest(
       ProjectRepository projectRepository,
       ProjectFileRepository projectFileRepository,
       FileVersionRepository fileVersionRepository,

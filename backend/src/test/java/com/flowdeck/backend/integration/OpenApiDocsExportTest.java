@@ -18,12 +18,12 @@ import org.springframework.test.web.servlet.MvcResult;
 @DatabaseIntegrationTest
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "OPENAPI_OUTPUT", matches = ".+")
-class OpenApiDocsExportIntegrationTest {
+class OpenApiDocsExportTest {
 
   private final MockMvc mockMvc;
 
   @Autowired
-  OpenApiDocsExportIntegrationTest(MockMvc mockMvc) {
+  OpenApiDocsExportTest(MockMvc mockMvc) {
     this.mockMvc = mockMvc;
   }
 

@@ -29,9 +29,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @DatabaseIntegrationTest
-@ContextConfiguration(classes = ProjectMemberForceLogoutIntegrationTest.TestAuthTokenConfig.class)
+@ContextConfiguration(classes = ProjectMemberForceLogoutTest.TestAuthTokenConfig.class)
 @Transactional
-class ProjectMemberForceLogoutIntegrationTest {
+class ProjectMemberForceLogoutTest {
 
   private final ProjectService projectService;
   private final ProjectMemberService projectMemberService;
@@ -40,7 +40,7 @@ class ProjectMemberForceLogoutIntegrationTest {
   private final RecordingAuthTokenService authTokenService;
 
   @Autowired
-  ProjectMemberForceLogoutIntegrationTest(
+  ProjectMemberForceLogoutTest(
       ProjectService projectService,
       ProjectMemberService projectMemberService,
       ProjectMemberRepository projectMemberRepository,

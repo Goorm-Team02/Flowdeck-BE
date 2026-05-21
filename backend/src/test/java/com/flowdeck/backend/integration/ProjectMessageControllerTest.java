@@ -1,7 +1,6 @@
 package com.flowdeck.backend.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -9,8 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.flowdeck.backend.auth.service.AuthTokenService;
-import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
@@ -24,14 +21,14 @@ import com.flowdeck.backend.projectmessage.realtime.ProjectMessageBroadcaster;
 import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
-import com.flowdeck.testsupport.DatabaseIntegrationTest;
+import com.flowdeck.testsupport.AuthenticatedWebIntegrationTest;
+import com.flowdeck.testsupport.JwtBearerTokenTestSupport;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -39,14 +36,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-@DatabaseIntegrationTest
-@AutoConfigureMockMvc
+@AuthenticatedWebIntegrationTest
 @TestPropertySource(properties = "app.jpa.auditing.enabled=true")
-@Import(ProjectMessageControllerIntegrationTest.TestPublisherConfig.class)
-class ProjectMessageControllerIntegrationTest {
+@Import(ProjectMessageControllerTest.TestPublisherConfig.class)
+class ProjectMessageControllerTest extends JwtBearerTokenTestSupport {
 
   private final MockMvc mockMvc;
-  private final JwtTokenProvider jwtTokenProvider;
   private final ProjectRepository projectRepository;
   private final ProjectMessageRepository projectMessageRepository;
   private final ProjectMemberRepository projectMemberRepository;
@@ -60,16 +55,14 @@ class ProjectMessageControllerIntegrationTest {
   private User outsider;
 
   @Autowired
-  ProjectMessageControllerIntegrationTest(
+  ProjectMessageControllerTest(
       MockMvc mockMvc,
-      JwtTokenProvider jwtTokenProvider,
       ProjectRepository projectRepository,
       ProjectMessageRepository projectMessageRepository,
       ProjectMemberRepository projectMemberRepository,
       UserRepository userRepository,
       TestProjectMessageBroadcaster projectMessageBroadcaster) {
     this.mockMvc = mockMvc;
-    this.jwtTokenProvider = jwtTokenProvider;
     this.projectRepository = projectRepository;
     this.projectMessageRepository = projectMessageRepository;
     this.projectMemberRepository = projectMemberRepository;
@@ -233,12 +226,6 @@ class ProjectMessageControllerIntegrationTest {
     assertThat(projectMessageRepository.existsById(message.getId())).isTrue();
   }
 
-  private String bearerToken(Long userId) {
-    return "Bearer "
-        + jwtTokenProvider.createAccessToken(
-            userId, "tester" + userId + "@flowdeck.com", List.of("ROLE_USER"));
-  }
-
   @TestConfiguration
   static class TestPublisherConfig {
 
@@ -246,12 +233,6 @@ class ProjectMessageControllerIntegrationTest {
     @Primary
     TestProjectMessageBroadcaster projectMessageBroadcaster() {
       return new TestProjectMessageBroadcaster();
-    }
-
-    @Bean
-    @Primary
-    AuthTokenService authTokenService() {
-      return mock(AuthTokenService.class);
     }
   }
 

@@ -38,6 +38,15 @@ class StompJwtChannelInterceptorTest {
   }
 
   @Test
+  void subscribeToProjectPresenceValidatesProjectAccess() {
+    Message<?> message = subscribeMessage("/topic/projects/project-123/presence", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verify(permissionService).validateProjectAccess("project-123", 7L);
+  }
+
+  @Test
   void subscribeToProjectFilesValidatesProjectAccess() {
     Message<?> message = subscribeMessage("/topic/projects/project-123/files", 7L);
 
