@@ -9,6 +9,7 @@ import com.flowdeck.backend.auth.dto.TokenRefreshResponse;
 import com.flowdeck.backend.auth.service.AuthService;
 import com.flowdeck.backend.global.response.ApiResponse;
 import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Authentication", description = "회원가입, 로그인, 토큰 재발급, 로그아웃 API")
 @RequestMapping("/api/auth")
 public class AuthController {
 

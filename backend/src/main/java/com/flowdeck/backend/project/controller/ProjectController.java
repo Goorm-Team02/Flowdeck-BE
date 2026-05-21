@@ -7,6 +7,7 @@ import com.flowdeck.backend.project.dto.ProjectListResponse;
 import com.flowdeck.backend.project.dto.ProjectResponse;
 import com.flowdeck.backend.project.dto.ProjectUpdateRequest;
 import com.flowdeck.backend.project.service.ProjectService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Projects", description = "프로젝트 생성, 조회, 수정, 삭제 및 공개 프로젝트 조회 API")
 @RequestMapping("/api/projects")
 public class ProjectController {
 

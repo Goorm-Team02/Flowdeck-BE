@@ -7,6 +7,7 @@ import com.flowdeck.backend.member.dto.MemberListResponse;
 import com.flowdeck.backend.member.dto.MemberResponse;
 import com.flowdeck.backend.member.dto.MemberRoleUpdateRequest;
 import com.flowdeck.backend.member.service.ProjectMemberService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Project Members", description = "프로젝트 멤버 조회, 초대, 권한 변경, 탈퇴 및 제거 API")
 @RequestMapping("/api/projects/{projectId}/members")
 public class ProjectMemberController {
 

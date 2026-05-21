@@ -5,6 +5,7 @@ import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.user.dto.UserResponse;
 import com.flowdeck.backend.user.dto.UserUpdateRequest;
 import com.flowdeck.backend.user.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Users", description = "내 사용자 정보 조회 및 수정 API")
 @RequestMapping("/api/users")
 public class UserController {
 
