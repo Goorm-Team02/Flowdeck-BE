@@ -8,6 +8,7 @@ import com.flowdeck.backend.projectmessage.dto.ProjectMessageCreateRequest;
 import com.flowdeck.backend.projectmessage.dto.ProjectMessageListResponse;
 import com.flowdeck.backend.projectmessage.dto.ProjectMessageResponse;
 import com.flowdeck.backend.projectmessage.service.ProjectMessageService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Validated
+@Tag(name = "Project Messages", description = "프로젝트 메시지 조회, 생성, 검색, 삭제 API")
 @RequestMapping("/api/projects/{projectId}/messages")
 public class ProjectMessageController {
 
