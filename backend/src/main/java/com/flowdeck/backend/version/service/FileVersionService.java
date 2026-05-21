@@ -15,6 +15,10 @@ import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
+import com.flowdeck.backend.version.dto.FileTimelineResponse;
+import com.flowdeck.backend.version.dto.FileTimelineSelectedVersionResponse;
+import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
+import com.flowdeck.backend.version.dto.FileVersionChangeSummary;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
@@ -25,12 +29,20 @@ import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FileVersionService {
+
+  private static final String SYSTEM_ACTOR_NAME = "시스템";
+  private static final String UNKNOWN_ACTOR_NAME = "알 수 없음";
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -80,6 +92,50 @@ public class FileVersionService {
     FileVersion version = getFileVersion(file, versionId);
 
     return FileVersionDetailResponse.from(version);
+  }
+
+  @Transactional(readOnly = true)
+  public FileTimelineResponse getTimeline(String projectId, Long userId, Long fileId) {
+    permissionService.validateProjectAccess(projectId, userId);
+
+    ProjectFile file = getProjectFile(projectId, fileId);
+    List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberAsc(file);
+
+    if (versions.isEmpty()) {
+      return FileTimelineResponse.empty(file);
+    }
+
+    Map<Long, String> creatorNames = creatorNames(versions);
+    Map<Integer, FileVersionChangeSummary> changeSummaries =
+        createTimelineChangeSummaries(versions);
+    FileVersion selectedVersion = versions.get(versions.size() - 1);
+    FileVersionChangeSummary selectedSummary =
+        changeSummaries.get(selectedVersion.getVersionNumber());
+    FileVersionDiffResponse diffFromPrevious = createDiffFromPrevious(selectedVersion, versions);
+
+    List<FileTimelineVersionResponse> timelineVersions =
+        versions.stream()
+            .map(
+                version -> {
+                  FileVersionChangeSummary summary =
+                      changeSummaries.get(version.getVersionNumber());
+                  return FileTimelineVersionResponse.from(
+                      version,
+                      resolveCreatorName(version.getUserId(), creatorNames),
+                      summary == null ? null : summary.addedLines(),
+                      summary == null ? null : summary.removedLines());
+                })
+            .toList();
+
+    FileTimelineSelectedVersionResponse timelineSelectedVersion =
+        FileTimelineSelectedVersionResponse.from(
+            selectedVersion,
+            resolveCreatorName(selectedVersion.getUserId(), creatorNames),
+            selectedSummary == null ? null : selectedSummary.addedLines(),
+            selectedSummary == null ? null : selectedSummary.removedLines());
+
+    return FileTimelineResponse.from(
+        file, timelineSelectedVersion, diffFromPrevious, timelineVersions);
   }
 
   @Transactional
@@ -156,12 +212,7 @@ public class FileVersionService {
             .findByFileAndVersionNumber(file, toVersion)
             .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
 
-    List<DiffLineResponse> changes = createLineDiff(from.getContent(), to.getContent());
-    int addedLines = countType(changes, "ADDED");
-    int removedLines = countType(changes, "REMOVED");
-
-    return new FileVersionDiffResponse(
-        from.getVersionNumber(), to.getVersionNumber(), addedLines, removedLines, changes);
+    return createDiffResponse(from, to);
   }
 
   private ProjectFile getProjectFile(String projectId, Long fileId) {
@@ -244,8 +295,102 @@ public class FileVersionService {
     return lengths;
   }
 
+  private FileVersionDiffResponse createDiffResponse(FileVersion from, FileVersion to) {
+    List<DiffLineResponse> changes = createLineDiff(from.getContent(), to.getContent());
+    int addedLines = countType(changes, "ADDED");
+    int removedLines = countType(changes, "REMOVED");
+
+    return new FileVersionDiffResponse(
+        from.getVersionNumber(), to.getVersionNumber(), addedLines, removedLines, changes);
+  }
+
+  private Map<Integer, FileVersionChangeSummary> createTimelineChangeSummaries(
+      List<FileVersion> versions) {
+    Map<Integer, FileVersionChangeSummary> summaries = new HashMap<>();
+
+    for (int index = 1; index < versions.size(); index++) {
+      FileVersion previousVersion = versions.get(index - 1);
+      FileVersion currentVersion = versions.get(index);
+      summaries.put(
+          currentVersion.getVersionNumber(),
+          createChangeSummary(previousVersion.getContent(), currentVersion.getContent()));
+    }
+
+    return summaries;
+  }
+
+  private FileVersionDiffResponse createDiffFromPrevious(
+      FileVersion selectedVersion, List<FileVersion> versions) {
+    for (int index = 0; index < versions.size(); index++) {
+      FileVersion version = versions.get(index);
+      if (version.getVersionNumber() != selectedVersion.getVersionNumber()) {
+        continue;
+      }
+
+      if (index == 0) {
+        return null;
+      }
+
+      return createDiffResponse(versions.get(index - 1), version);
+    }
+
+    throw new BusinessException(ErrorCode.VERSION_NOT_FOUND);
+  }
+
+  private FileVersionChangeSummary createChangeSummary(String oldContent, String newContent) {
+    String[] oldLines = oldContent.split("\\R", -1);
+    String[] newLines = newContent.split("\\R", -1);
+
+    int[][] lcsLengths = createLcsLengths(oldLines, newLines);
+    int oldIndex = 0;
+    int newIndex = 0;
+    int addedLines = 0;
+    int removedLines = 0;
+
+    while (oldIndex < oldLines.length && newIndex < newLines.length) {
+      String oldLine = oldLines[oldIndex];
+      String newLine = newLines[newIndex];
+
+      if (oldLine.equals(newLine)) {
+        oldIndex++;
+        newIndex++;
+      } else if (lcsLengths[oldIndex + 1][newIndex] >= lcsLengths[oldIndex][newIndex + 1]) {
+        removedLines++;
+        oldIndex++;
+      } else {
+        addedLines++;
+        newIndex++;
+      }
+    }
+
+    removedLines += oldLines.length - oldIndex;
+    addedLines += newLines.length - newIndex;
+
+    return new FileVersionChangeSummary(addedLines, removedLines);
+  }
+
   private int countType(List<DiffLineResponse> changes, String type) {
     return (int) changes.stream().filter(change -> type.equals(change.type())).count();
+  }
+
+  private Map<Long, String> creatorNames(Collection<FileVersion> versions) {
+    List<Long> userIds =
+        versions.stream().map(FileVersion::getUserId).filter(Objects::nonNull).distinct().toList();
+
+    if (userIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return userRepository.findAllById(userIds).stream()
+        .collect(Collectors.toMap(User::getId, User::getName));
+  }
+
+  private String resolveCreatorName(Long userId, Map<Long, String> creatorNames) {
+    if (userId == null) {
+      return SYSTEM_ACTOR_NAME;
+    }
+
+    return creatorNames.getOrDefault(userId, UNKNOWN_ACTOR_NAME);
   }
 
   private String getActorName(Long userId) {
