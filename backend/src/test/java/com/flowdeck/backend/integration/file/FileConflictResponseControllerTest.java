@@ -27,11 +27,7 @@ class FileConflictResponseControllerTest extends FileWebTestSupport {
   void saveFileConflictReturnsFileConflictResponseData() throws Exception {
     FileFixture fixture =
         createOwnerFile(
-            "conflict project",
-            "conflict-api@test.com",
-            "Main.java",
-            "class Main {}",
-            1);
+            "conflict project", "conflict-api@test.com", "Main.java", "class Main {}", 1);
 
     mockMvc
         .perform(
@@ -63,11 +59,7 @@ class FileConflictResponseControllerTest extends FileWebTestSupport {
   void deleteFileWithoutExpectedRevisionReturnsBadRequest() throws Exception {
     FileFixture fixture =
         createOwnerFile(
-            "conflict project",
-            "conflict-api@test.com",
-            "Main.java",
-            "class Main {}",
-            1);
+            "conflict project", "conflict-api@test.com", "Main.java", "class Main {}", 1);
 
     mockMvc
         .perform(

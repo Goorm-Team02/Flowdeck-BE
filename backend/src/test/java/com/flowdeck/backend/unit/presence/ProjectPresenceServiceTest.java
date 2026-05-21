@@ -65,8 +65,7 @@ class ProjectPresenceServiceTest {
     Instant now = Instant.now();
     projectPresenceStore.touchSession(
         "session-1", new ProjectPresenceSession(PROJECT_ID, 7L, now.minusSeconds(5)));
-    projectPresenceStore.touchSession(
-        "session-2", new ProjectPresenceSession(PROJECT_ID, 7L, now));
+    projectPresenceStore.touchSession("session-2", new ProjectPresenceSession(PROJECT_ID, 7L, now));
     projectPresenceStore.touchSession(
         "session-3", new ProjectPresenceSession(PROJECT_ID, 8L, now.minusSeconds(2)));
     when(userRepository.findAllById(any()))

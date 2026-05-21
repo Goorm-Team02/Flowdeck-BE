@@ -80,5 +80,4 @@ class FileErrorResponseControllerTest extends FileWebTestSupport {
         .andExpect(jsonPath("$.code").value("FILE_400_3"))
         .andExpect(jsonPath("$.data").doesNotExist());
   }
-
 }
