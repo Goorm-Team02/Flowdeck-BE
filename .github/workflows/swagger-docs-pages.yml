@@ -46,7 +46,7 @@ jobs:
       - name: Generate OpenAPI JSON
         env:
           OPENAPI_OUTPUT: ${{ github.workspace }}/docs/openapi.json
-        run: ./gradlew test --tests 'com.flowdeck.backend.integration.OpenApiDocsExportIntegrationTest'
+        run: ./gradlew test --tests 'com.flowdeck.backend.integration.OpenApiDocsExportTest'
 
       - name: Verify generated artifact
         working-directory: .
