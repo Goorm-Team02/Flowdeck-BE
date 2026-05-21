@@ -246,7 +246,76 @@ POST /api/projects/{projectId}/files/{fileId}/versions/{versionId}/restore
 
 ---
 
-## 6. 파일 삭제
+## 6. 버전 diff 조회
+
+```http
+GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to={toVersion}
+```
+
+### 목적
+
+두 명시적 버전의 저장 내용을 비교해 버전 슬라이드 UI에서 라인 단위 변경점을 표시합니다.
+
+프론트는 사용자가 선택한 버전을 기준으로 이전 버전 또는 비교 대상 버전을 지정해 호출합니다.
+
+### Query parameters
+
+| name | type | required | description |
+| --- | --- | --- | --- |
+| `from` | number | true | 비교 기준 버전 번호 |
+| `to` | number | true | 비교 대상 버전 번호 |
+
+### Response data
+
+```json
+{
+  "fromVersion": 1,
+  "toVersion": 2,
+  "addedLines": 2,
+  "removedLines": 1,
+  "changes": [
+    {
+      "type": "UNCHANGED",
+      "oldLineNumber": 1,
+      "newLineNumber": 1,
+      "content": "import React from 'react'"
+    },
+    {
+      "type": "ADDED",
+      "oldLineNumber": null,
+      "newLineNumber": 2,
+      "content": "import MonacoEditor from '@monaco-editor/react'"
+    },
+    {
+      "type": "REMOVED",
+      "oldLineNumber": 4,
+      "newLineNumber": null,
+      "content": "  return <div>에디터</div>"
+    }
+  ]
+}
+```
+
+### Diff line type
+
+| type | description |
+| --- | --- |
+| `UNCHANGED` | 양쪽 버전에 동일하게 존재하는 라인 |
+| `ADDED` | `to` 버전에 새로 추가된 라인 |
+| `REMOVED` | `from` 버전에서 제거된 라인 |
+
+### 동작
+
+- 서버는 두 버전의 `content`를 조회 시점에 비교합니다.
+- 파일 버전은 전체 스냅샷으로 저장하며 diff 결과를 별도 테이블에 저장하지 않습니다.
+- LCS 기반 라인 diff로 중간 삽입/삭제 이후의 동일 라인을 `UNCHANGED`로 정렬합니다.
+- 한 줄 내용 변경은 `REMOVED` 1줄과 `ADDED` 1줄로 응답합니다.
+- `addedLines`와 `removedLines`는 각각 `ADDED`, `REMOVED` 라인 수입니다.
+- 비교 대상 버전이 없으면 `VERSION_404`를 반환합니다.
+
+---
+
+## 7. 파일 삭제
 
 ```http
 DELETE /api/projects/{projectId}/files/{fileId}?expectedRevision=5
@@ -268,7 +337,7 @@ DELETE /api/projects/{projectId}/files/{fileId}?expectedRevision=5
 
 ---
 
-## 7. 파일 이름변경 / 이동
+## 8. 파일 이름변경 / 이동
 
 파일 이름변경과 이동은 파일 내용 변경이 아니라 파일 트리/메타데이터 변경으로 분류합니다.
 
@@ -293,7 +362,7 @@ MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않
 
 ---
 
-## 8. 프론트 에러 분기 기준
+## 9. 프론트 에러 분기 기준
 
 프론트는 공통 응답의 `code` 값을 기준으로 UI를 분기합니다.
 
@@ -317,7 +386,7 @@ MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않
 
 ---
 
-## 9. 운영 DB 마이그레이션 주의사항
+## 10. 운영 DB 마이그레이션 주의사항
 
 현재 MVP 개발 환경에서는 JPA `ddl-auto` 기준으로 컬럼이 반영될 수 있습니다.
 
@@ -345,7 +414,7 @@ MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않
 
 ---
 
-## 10. 추후 검토 항목
+## 11. 추후 검토 항목
 
 - 프론트 충돌 모달 UX
 - 편집 presence 및 파일 저장/복원 WebSocket 알림
