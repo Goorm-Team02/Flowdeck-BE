@@ -1,14 +1,12 @@
 package com.flowdeck.backend.presence.controller;
 
-import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
+import com.flowdeck.backend.global.security.jwt.StompPrincipalExtractor;
 import com.flowdeck.backend.presence.realtime.ProjectPresenceBroadcaster;
 import com.flowdeck.backend.presence.service.ProjectPresenceService;
 import java.security.Principal;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.security.core.AuthenticatedPrincipal;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -43,20 +41,6 @@ public class ProjectPresenceMessageController {
   }
 
   private Long extractUserId(Principal principal) {
-    if (principal instanceof Authentication authentication
-        && authentication.getPrincipal() instanceof JwtAuthentication jwtAuthentication) {
-      return jwtAuthentication.getUserId();
-    }
-
-    if (principal instanceof JwtAuthentication jwtAuthentication) {
-      return jwtAuthentication.getUserId();
-    }
-
-    if (principal instanceof AuthenticatedPrincipal authenticatedPrincipal) {
-      throw new IllegalStateException(
-          "Unsupported WebSocket principal: " + authenticatedPrincipal.getClass().getName());
-    }
-
-    throw new IllegalStateException("WebSocket authentication is required.");
+    return StompPrincipalExtractor.extractUserId(principal);
   }
 }
