@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,7 +31,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -88,33 +86,6 @@ class ProjectMessageControllerTest extends JwtBearerTokenTestSupport {
     projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
     projectMemberRepository.save(new ProjectMember(project, editor, ProjectRole.EDITOR));
     projectMemberRepository.save(new ProjectMember(project, viewer, ProjectRole.VIEWER));
-  }
-
-  @Test
-  void createMessageStoresAuthenticatedUserMessage() throws Exception {
-    mockMvc
-        .perform(
-            post("/api/projects/{projectId}/messages", project.getPublicId())
-                .header(AUTHORIZATION, bearerToken(owner.getId()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"content\":\"첫 메시지\"}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.success").value(true))
-        .andExpect(jsonPath("$.message").value("메시지가 저장되었습니다."))
-        .andExpect(jsonPath("$.data.userId").value(owner.getId()))
-        .andExpect(jsonPath("$.data.senderName").value(owner.getName()))
-        .andExpect(jsonPath("$.data.messageType").value("CHAT"))
-        .andExpect(jsonPath("$.data.content").value("첫 메시지"));
-
-    assertThat(projectMessageBroadcaster.events()).hasSize(1);
-    assertThat(projectMessageBroadcaster.events().getFirst().projectId())
-        .isEqualTo(project.getPublicId());
-    assertThat(projectMessageBroadcaster.events().getFirst().event().eventType())
-        .isEqualTo(ProjectMessageEventType.CREATED);
-    assertThat(projectMessageBroadcaster.events().getFirst().event().message().senderName())
-        .isEqualTo(owner.getName());
-    assertThat(projectMessageBroadcaster.events().getFirst().event().message().content())
-        .isEqualTo("첫 메시지");
   }
 
   @Test
@@ -192,18 +163,6 @@ class ProjectMessageControllerTest extends JwtBearerTokenTestSupport {
         .perform(
             get("/api/projects/{projectId}/messages", project.getPublicId())
                 .header(AUTHORIZATION, bearerToken(outsider.getId())))
-        .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.code").value("AUTH_403"));
-  }
-
-  @Test
-  void viewerCannotCreateMessage() throws Exception {
-    mockMvc
-        .perform(
-            post("/api/projects/{projectId}/messages", project.getPublicId())
-                .header(AUTHORIZATION, bearerToken(viewer.getId()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"content\":\"뷰어 메시지\"}"))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("AUTH_403"));
   }

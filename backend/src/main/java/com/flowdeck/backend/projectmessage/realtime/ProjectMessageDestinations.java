@@ -9,6 +9,8 @@ public final class ProjectMessageDestinations {
   private static final String MESSAGES_SUFFIX = "/messages";
   private static final Pattern MESSAGES_TOPIC_PATTERN =
       Pattern.compile("^/topic/projects/([^/]+)/messages$");
+  private static final Pattern MESSAGES_APPLICATION_DESTINATION_PATTERN =
+      Pattern.compile("^/app/projects/([^/]+)/messages$");
 
   private ProjectMessageDestinations() {
     super();
@@ -28,6 +30,19 @@ public final class ProjectMessageDestinations {
     }
 
     Matcher matcher = MESSAGES_TOPIC_PATTERN.matcher(destination);
+    if (!matcher.matches()) {
+      return null;
+    }
+
+    return matcher.group(1);
+  }
+
+  public static String extractProjectIdFromMessagesApplicationDestination(String destination) {
+    if (destination == null) {
+      return null;
+    }
+
+    Matcher matcher = MESSAGES_APPLICATION_DESTINATION_PATTERN.matcher(destination);
     if (!matcher.matches()) {
       return null;
     }

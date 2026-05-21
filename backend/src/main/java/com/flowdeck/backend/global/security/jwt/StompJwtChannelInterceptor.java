@@ -12,7 +12,6 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.security.core.AuthenticatedPrincipal;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -53,6 +52,10 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
       validateProjectSubscription(accessor);
     }
 
+    if (StompCommand.SEND.equals(accessor.getCommand())) {
+      validateProjectSend(accessor);
+    }
+
     return message;
   }
 
@@ -90,21 +93,18 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
     permissionService.validateProjectAccess(projectId, extractUserId(accessor.getUser()));
   }
 
+  private void validateProjectSend(StompHeaderAccessor accessor) {
+    String projectId =
+        ProjectMessageDestinations.extractProjectIdFromMessagesApplicationDestination(
+            accessor.getDestination());
+    if (projectId == null) {
+      return;
+    }
+
+    permissionService.validateEditor(projectId, extractUserId(accessor.getUser()));
+  }
+
   private Long extractUserId(Principal principal) {
-    if (principal instanceof Authentication authentication
-        && authentication.getPrincipal() instanceof JwtAuthentication jwtAuthentication) {
-      return jwtAuthentication.getUserId();
-    }
-
-    if (principal instanceof JwtAuthentication jwtAuthentication) {
-      return jwtAuthentication.getUserId();
-    }
-
-    if (principal instanceof AuthenticatedPrincipal authenticatedPrincipal) {
-      throw new IllegalStateException(
-          "Unsupported WebSocket principal: " + authenticatedPrincipal.getClass().getName());
-    }
-
-    throw new IllegalStateException("WebSocket authentication is required.");
+    return StompPrincipalExtractor.extractUserId(principal);
   }
 }

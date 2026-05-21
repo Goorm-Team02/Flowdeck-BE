@@ -75,8 +75,35 @@ class StompJwtChannelInterceptorTest {
         .hasMessageContaining("authentication is required");
   }
 
+  @Test
+  void sendToProjectMessagesValidatesEditorPermission() {
+    Message<?> message = sendMessage("/app/projects/project-123/messages", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verify(permissionService).validateEditor("project-123", 7L);
+  }
+
+  @Test
+  void sendToNonProjectDestinationSkipsEditorValidation() {
+    Message<?> message = sendMessage("/app/system/health", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verifyNoInteractions(permissionService);
+  }
+
   private Message<?> subscribeMessage(String destination, Long userId) {
     StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+    accessor.setDestination(destination);
+    accessor.setUser(
+        new UsernamePasswordAuthenticationToken(
+            new JwtAuthentication(userId, "tester@flowdeck.com"), null, List.of()));
+    return MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+  }
+
+  private Message<?> sendMessage(String destination, Long userId) {
+    StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
     accessor.setDestination(destination);
     accessor.setUser(
         new UsernamePasswordAuthenticationToken(
