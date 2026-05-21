@@ -39,7 +39,10 @@ public class RedisProjectPresenceStore implements ProjectPresenceStore {
         .set(sessionKey(sessionId), writeSession(session), SESSION_TTL);
     stringRedisTemplate
         .opsForZSet()
-        .add(projectPresenceKey(session.projectId()), sessionId, session.lastSeenAt().toEpochMilli());
+        .add(
+            projectPresenceKey(session.projectId()),
+            sessionId,
+            session.lastSeenAt().toEpochMilli());
     pruneExpiredSessions(session.projectId(), session.lastSeenAt());
   }
 
@@ -65,7 +68,9 @@ public class RedisProjectPresenceStore implements ProjectPresenceStore {
     findSession(sessionId)
         .ifPresent(
             session -> {
-              stringRedisTemplate.opsForZSet().remove(projectPresenceKey(session.projectId()), sessionId);
+              stringRedisTemplate
+                  .opsForZSet()
+                  .remove(projectPresenceKey(session.projectId()), sessionId);
               stringRedisTemplate.delete(sessionKey(sessionId));
             });
   }

@@ -52,8 +52,7 @@ public abstract class FileWebTestSupport extends JwtBearerTokenTestSupport {
       file.increaseEditRevision();
     }
 
-    return new FileFixture(
-        fixture.project(), fixture.user(), projectFileRepository.save(file));
+    return new FileFixture(fixture.project(), fixture.user(), projectFileRepository.save(file));
   }
 
   protected record OwnerProjectFixture(Project project, User user) {}

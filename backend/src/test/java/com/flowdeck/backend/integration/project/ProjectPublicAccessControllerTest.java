@@ -29,9 +29,7 @@ class ProjectPublicAccessControllerTest extends JwtBearerTokenTestSupport {
 
   @Autowired
   ProjectPublicAccessControllerTest(
-      MockMvc mockMvc,
-      ProjectRepository projectRepository,
-      UserRepository userRepository) {
+      MockMvc mockMvc, ProjectRepository projectRepository, UserRepository userRepository) {
     this.mockMvc = mockMvc;
     this.projectRepository = projectRepository;
     this.userRepository = userRepository;

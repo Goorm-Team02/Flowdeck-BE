@@ -29,11 +29,7 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   void getFileReturnsEditorInitialStateFields() throws Exception {
     FileFixture fixture =
         createOwnerFile(
-            "frontend project",
-            "frontend-contract@test.com",
-            "Main.java",
-            "class Main {}",
-            1);
+            "frontend project", "frontend-contract@test.com", "Main.java", "class Main {}", 1);
 
     mockMvc
         .perform(
@@ -59,11 +55,7 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   void saveFileReturnsStateForFrontendRefresh() throws Exception {
     FileFixture fixture =
         createOwnerFile(
-            "frontend project",
-            "frontend-contract@test.com",
-            "Main.java",
-            "class Main {}",
-            1);
+            "frontend project", "frontend-contract@test.com", "Main.java", "class Main {}", 1);
 
     mockMvc
         .perform(
@@ -94,11 +86,7 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   void createVersionReturnsStateForFrontendRefresh() throws Exception {
     FileFixture fixture =
         createOwnerFile(
-            "frontend project",
-            "frontend-contract@test.com",
-            "Main.java",
-            "class Main {}",
-            1);
+            "frontend project", "frontend-contract@test.com", "Main.java", "class Main {}", 1);
 
     mockMvc
         .perform(
@@ -122,11 +110,7 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   void restoreVersionReturnsStateForFrontendRefresh() throws Exception {
     FileFixture fixture =
         createOwnerFile(
-            "frontend project",
-            "frontend-contract@test.com",
-            "Main.java",
-            "class Main {}",
-            1);
+            "frontend project", "frontend-contract@test.com", "Main.java", "class Main {}", 1);
     fixture.file().increaseVersion();
     projectFileRepository.save(fixture.file());
 
