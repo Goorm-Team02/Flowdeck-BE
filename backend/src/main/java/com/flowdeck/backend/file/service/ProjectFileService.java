@@ -67,6 +67,10 @@ public class ProjectFileService {
 
     ProjectFile file = new ProjectFile(project, parent, request.getName(), request.getType());
     ProjectFile savedFile = projectFileRepository.save(file);
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.created(projectId, savedFile, userId, getActorName(userId));
+
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
 
     return ProjectFileResponse.from(savedFile);
   }
@@ -148,11 +152,10 @@ public class ProjectFileService {
     validateDuplicateName(project, file.getParent(), request.getName());
 
     file.rename(request.getName());
-    afterCommitExecutor.run(
-        () ->
-            projectFileBroadcaster.broadcast(
-                ProjectFileEventResponse.renamed(
-                    projectId, file, userId, getActorName(userId), oldName)));
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.renamed(projectId, file, userId, getActorName(userId), oldName);
+
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
     return ProjectFileResponse.from(file);
   }
 
@@ -170,11 +173,10 @@ public class ProjectFileService {
     validateDuplicateName(project, newParent, file.getName());
 
     file.move(newParent);
-    afterCommitExecutor.run(
-        () ->
-            projectFileBroadcaster.broadcast(
-                ProjectFileEventResponse.moved(
-                    projectId, file, userId, getActorName(userId), oldParentId)));
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.moved(projectId, file, userId, getActorName(userId), oldParentId);
+
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
     return ProjectFileResponse.from(file);
   }
 
@@ -188,12 +190,12 @@ public class ProjectFileService {
     validateExpectedRevision(file, expectedRevision);
 
     List<Long> deletedFileIds = projectFileDeletionService.collectDeletedFileIds(file);
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.deleted(
+            projectId, file, userId, getActorName(userId), deletedFileIds);
+
     projectFileDeletionService.deleteRecursive(file);
-    afterCommitExecutor.run(
-        () ->
-            projectFileBroadcaster.broadcast(
-                ProjectFileEventResponse.deleted(
-                    projectId, file, userId, getActorName(userId), deletedFileIds)));
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
   }
 
   private void validateExpectedRevision(ProjectFile file, Long expectedRevision) {

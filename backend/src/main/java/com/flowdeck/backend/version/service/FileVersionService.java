@@ -132,10 +132,10 @@ public class FileVersionService {
             "버전 " + version.getVersionNumber() + " 복원");
 
     fileVersionRepository.save(restoredVersion);
-    afterCommitExecutor.run(
-        () ->
-            projectFileBroadcaster.broadcast(
-                ProjectFileEventResponse.restored(projectId, file, userId, getActorName(userId))));
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.restored(projectId, file, userId, getActorName(userId));
+
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
 
     return FileVersionRestoreResponse.from(file);
   }

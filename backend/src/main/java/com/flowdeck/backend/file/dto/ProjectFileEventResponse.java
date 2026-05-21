@@ -21,6 +21,24 @@ public record ProjectFileEventResponse(
     Long newParentId,
     List<Long> deletedFileIds) {
 
+  public static ProjectFileEventResponse created(
+      String projectId, ProjectFile file, Long actorId, String actorName) {
+    return new ProjectFileEventResponse(
+        ProjectFileEventType.FILE_CREATED,
+        projectId,
+        file.getId(),
+        actorId,
+        actorName,
+        file.getEditRevision(),
+        file.getCurrentVersion(),
+        Instant.now(),
+        null,
+        file.getName(),
+        null,
+        parentId(file),
+        null);
+  }
+
   public static ProjectFileEventResponse saved(
       String projectId, ProjectFile file, Long actorId, String actorName) {
     return baseEvent(ProjectFileEventType.FILE_SAVED, projectId, file, actorId, actorName);

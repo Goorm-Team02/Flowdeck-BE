@@ -74,10 +74,10 @@ public class FileSaveService {
 
     file.updateContent(request.getContent());
     file.increaseEditRevision();
-    afterCommitExecutor.run(
-        () ->
-            projectFileBroadcaster.broadcast(
-                ProjectFileEventResponse.saved(projectId, file, userId, getActorName(userId))));
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.saved(projectId, file, userId, getActorName(userId));
+
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
 
     return FileSaveResponse.from(file);
   }
