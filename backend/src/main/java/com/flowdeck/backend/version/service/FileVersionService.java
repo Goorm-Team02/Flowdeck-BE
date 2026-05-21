@@ -156,7 +156,7 @@ public class FileVersionService {
             .findByFileAndVersionNumber(file, toVersion)
             .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
 
-    List<DiffLineResponse> changes = createSimpleDiff(from.getContent(), to.getContent());
+    List<DiffLineResponse> changes = createLineDiff(from.getContent(), to.getContent());
     int addedLines = countType(changes, "ADDED");
     int removedLines = countType(changes, "REMOVED");
 
@@ -188,30 +188,60 @@ public class FileVersionService {
         .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
   }
 
-  private List<DiffLineResponse> createSimpleDiff(String oldContent, String newContent) {
+  private List<DiffLineResponse> createLineDiff(String oldContent, String newContent) {
     String[] oldLines = oldContent.split("\\R", -1);
     String[] newLines = newContent.split("\\R", -1);
 
-    int maxLength = Math.max(oldLines.length, newLines.length);
+    int[][] lcsLengths = createLcsLengths(oldLines, newLines);
     List<DiffLineResponse> changes = new ArrayList<>();
 
-    for (int index = 0; index < maxLength; index++) {
-      String oldLine = index < oldLines.length ? oldLines[index] : null;
-      String newLine = index < newLines.length ? newLines[index] : null;
+    int oldIndex = 0;
+    int newIndex = 0;
+    while (oldIndex < oldLines.length && newIndex < newLines.length) {
+      String oldLine = oldLines[oldIndex];
+      String newLine = newLines[newIndex];
 
-      if (oldLine == null) {
-        changes.add(new DiffLineResponse("ADDED", null, index + 1, newLine));
-      } else if (newLine == null) {
-        changes.add(new DiffLineResponse("REMOVED", index + 1, null, oldLine));
-      } else if (oldLine.equals(newLine)) {
-        changes.add(new DiffLineResponse("UNCHANGED", index + 1, index + 1, newLine));
+      if (oldLine.equals(newLine)) {
+        changes.add(new DiffLineResponse("UNCHANGED", oldIndex + 1, newIndex + 1, newLine));
+        oldIndex++;
+        newIndex++;
+      } else if (lcsLengths[oldIndex + 1][newIndex] >= lcsLengths[oldIndex][newIndex + 1]) {
+        changes.add(new DiffLineResponse("REMOVED", oldIndex + 1, null, oldLine));
+        oldIndex++;
       } else {
-        changes.add(new DiffLineResponse("REMOVED", index + 1, null, oldLine));
-        changes.add(new DiffLineResponse("ADDED", null, index + 1, newLine));
+        changes.add(new DiffLineResponse("ADDED", null, newIndex + 1, newLine));
+        newIndex++;
       }
     }
 
+    while (oldIndex < oldLines.length) {
+      changes.add(new DiffLineResponse("REMOVED", oldIndex + 1, null, oldLines[oldIndex]));
+      oldIndex++;
+    }
+
+    while (newIndex < newLines.length) {
+      changes.add(new DiffLineResponse("ADDED", null, newIndex + 1, newLines[newIndex]));
+      newIndex++;
+    }
+
     return changes;
+  }
+
+  private int[][] createLcsLengths(String[] oldLines, String[] newLines) {
+    int[][] lengths = new int[oldLines.length + 1][newLines.length + 1];
+
+    for (int oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex--) {
+      for (int newIndex = newLines.length - 1; newIndex >= 0; newIndex--) {
+        if (oldLines[oldIndex].equals(newLines[newIndex])) {
+          lengths[oldIndex][newIndex] = lengths[oldIndex + 1][newIndex + 1] + 1;
+        } else {
+          lengths[oldIndex][newIndex] =
+              Math.max(lengths[oldIndex + 1][newIndex], lengths[oldIndex][newIndex + 1]);
+        }
+      }
+    }
+
+    return lengths;
   }
 
   private int countType(List<DiffLineResponse> changes, String type) {
