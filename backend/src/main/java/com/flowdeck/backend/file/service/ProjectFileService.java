@@ -67,6 +67,10 @@ public class ProjectFileService {
 
     ProjectFile file = new ProjectFile(project, parent, request.getName(), request.getType());
     ProjectFile savedFile = projectFileRepository.save(file);
+    ProjectFileEventResponse event =
+        ProjectFileEventResponse.created(projectId, savedFile, userId, getActorName(userId));
+
+    afterCommitExecutor.run(() -> projectFileBroadcaster.broadcast(event));
 
     return ProjectFileResponse.from(savedFile);
   }

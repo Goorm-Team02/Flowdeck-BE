@@ -86,6 +86,47 @@ class ProjectFileRealtimeControllerIntegrationTest {
   }
 
   @Test
+  void createFilePublishesCreatedEvent() throws Exception {
+    Project project =
+        projectRepository.save(new Project("project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("create-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+    ProjectFile parentFolder =
+        projectFileRepository.save(new ProjectFile(project, null, "src", FileType.FOLDER));
+
+    mockMvc
+        .perform(
+            post("/api/projects/{projectId}/files", project.getPublicId())
+                .header(AUTHORIZATION, bearerToken(owner.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "parentId": %d,
+                      "name": "Main.java",
+                      "type": "FILE"
+                    }
+                    """
+                        .formatted(parentFolder.getId())))
+        .andExpect(status().isOk());
+
+    assertThat(projectFileBroadcaster.events()).hasSize(1);
+    ProjectFileEventResponse event = projectFileBroadcaster.events().getFirst();
+    assertThat(event.eventType()).isEqualTo(ProjectFileEventType.FILE_CREATED);
+    assertThat(event.projectId()).isEqualTo(project.getPublicId());
+    assertThat(event.actorId()).isEqualTo(owner.getId());
+    assertThat(event.actorName()).isEqualTo(owner.getName());
+    assertThat(event.editRevision()).isZero();
+    assertThat(event.currentVersion()).isZero();
+    assertThat(event.newName()).isEqualTo("Main.java");
+    assertThat(event.oldName()).isNull();
+    assertThat(event.oldParentId()).isNull();
+    assertThat(event.newParentId()).isEqualTo(parentFolder.getId());
+    assertThat(event.deletedFileIds()).isNull();
+    assertThat(event.occurredAt()).isNotNull();
+  }
+
+  @Test
   void saveFilePublishesSavedEvent() throws Exception {
     FileFixture fixture = createFileFixture("save-owner@test.com", "owner", "Main.java");
 
