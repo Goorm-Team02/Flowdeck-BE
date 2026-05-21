@@ -7,7 +7,6 @@ import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
 import com.flowdeck.backend.projectmessage.dto.ProjectMessageListResponse;
 import com.flowdeck.backend.projectmessage.service.ProjectMessageService;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
