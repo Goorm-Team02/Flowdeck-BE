@@ -21,6 +21,7 @@ import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
+import com.flowdeck.backend.version.dto.FileTimelineResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
@@ -308,6 +309,119 @@ class FileVersionServiceTest {
             tuple("REMOVED", "  return () -> provider.disconnect()"),
             tuple("ADDED", "  return () -> provider.destroy()"),
             tuple("UNCHANGED", "}, [])"));
+  }
+
+  @Test
+  void getTimelineReturnsLatestSelectedVersionAndCardSummaries() {
+    Project project =
+        projectRepository.save(
+            new Project("timeline project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("timeline-service-owner@test.com", "password", "홍길동"));
+    User editor =
+        userRepository.save(new User("timeline-service-editor@test.com", "password", "김철수"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+    projectMemberRepository.save(new ProjectMember(project, editor, ProjectRole.EDITOR));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Editor.jsx", FileType.FILE));
+
+    fileVersionRepository.save(
+        new FileVersion(
+            file,
+            owner.getId(),
+            1,
+            "import React from 'react'\n"
+                + "\n"
+                + "export default function Editor() {\n"
+                + "  return <div>에디터</div>\n"
+                + "}",
+            "최초 생성"));
+    fileVersionRepository.save(
+        new FileVersion(
+            file,
+            editor.getId(),
+            2,
+            "import React from 'react'\n"
+                + "import MonacoEditor from '@monaco-editor/react'\n"
+                + "\n"
+                + "export default function Editor() {\n"
+                + "  return <MonacoEditor height=\"100%\" />\n"
+                + "}",
+            "Monaco 연결"));
+
+    FileTimelineResponse response =
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId());
+
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.fileName()).isEqualTo("Editor.jsx");
+    assertThat(response.totalVersions()).isEqualTo(2);
+    assertThat(response.selectedVersion()).isNotNull();
+    assertThat(response.selectedVersion().versionNumber()).isEqualTo(2);
+    assertThat(response.selectedVersion().createdBy()).isEqualTo(editor.getId());
+    assertThat(response.selectedVersion().createdByName()).isEqualTo("김철수");
+    assertThat(response.selectedVersion().content()).contains("MonacoEditor");
+    assertThat(response.selectedVersion().addedLinesFromPrevious()).isEqualTo(2);
+    assertThat(response.selectedVersion().removedLinesFromPrevious()).isEqualTo(1);
+    assertThat(response.diffFromPrevious()).isNotNull();
+    assertThat(response.diffFromPrevious().fromVersion()).isEqualTo(1);
+    assertThat(response.diffFromPrevious().toVersion()).isEqualTo(2);
+    assertThat(response.diffFromPrevious().addedLines()).isEqualTo(2);
+    assertThat(response.diffFromPrevious().removedLines()).isEqualTo(1);
+    assertThat(response.versions())
+        .extracting(
+            version -> version.versionNumber(),
+            version -> version.createdByName(),
+            version -> version.addedLinesFromPrevious(),
+            version -> version.removedLinesFromPrevious())
+        .containsExactly(tuple(1, "홍길동", null, null), tuple(2, "김철수", 2, 1));
+  }
+
+  @Test
+  void getTimelineReturnsEmptyStateWhenFileHasNoSavedVersions() {
+    Project project =
+        projectRepository.save(
+            new Project("empty timeline project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("empty-timeline-service-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Empty.java", FileType.FILE));
+
+    FileTimelineResponse response =
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId());
+
+    assertThat(response.fileId()).isEqualTo(file.getId());
+    assertThat(response.totalVersions()).isZero();
+    assertThat(response.selectedVersion()).isNull();
+    assertThat(response.diffFromPrevious()).isNull();
+    assertThat(response.versions()).isEmpty();
+  }
+
+  @Test
+  void getTimelineUsesFallbackNamesForSystemAndUnknownActors() {
+    Project project =
+        projectRepository.save(
+            new Project("timeline actor project", "description", ProjectVisibility.PRIVATE));
+    User owner =
+        userRepository.save(new User("timeline-actor-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Editor.jsx", FileType.FILE));
+
+    fileVersionRepository.save(new FileVersion(file, null, 1, "line 1", "system snapshot"));
+    fileVersionRepository.save(
+        new FileVersion(file, 999_999L, 2, "line 1\nline 2", "unknown actor"));
+
+    FileTimelineResponse response =
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId());
+
+    assertThat(response.versions())
+        .extracting(version -> version.versionNumber(), version -> version.createdByName())
+        .containsExactly(tuple(1, "시스템"), tuple(2, "알 수 없음"));
+    assertThat(response.selectedVersion().createdByName()).isEqualTo("알 수 없음");
   }
 
   private FileVersionCreateRequest createVersionRequest(String changeMessage) {

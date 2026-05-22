@@ -2,6 +2,7 @@ package com.flowdeck.backend.version.controller;
 
 import com.flowdeck.backend.global.response.ApiResponse;
 import com.flowdeck.backend.global.security.jwt.JwtAuthentication;
+import com.flowdeck.backend.version.dto.FileTimelineResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
@@ -56,6 +57,19 @@ public class FileVersionController {
     return ApiResponse.success(
         "파일 버전이 저장되었습니다.",
         fileVersionService.createVersion(projectId, authentication.getUserId(), fileId, request));
+  }
+
+  @GetMapping("/timeline")
+  @Operation(
+      summary = "파일 타임라인 조회",
+      description =
+          "버전 카드 목록, 최신 버전 코드, 최신 버전의 이전 버전 대비 diff 요약을 한 번에 조회합니다. " + "타임라인 모달 초기 진입 시 사용합니다.")
+  public ApiResponse<FileTimelineResponse> getTimeline(
+      @PathVariable String projectId,
+      @AuthenticationPrincipal JwtAuthentication authentication,
+      @PathVariable Long fileId) {
+    return ApiResponse.success(
+        fileVersionService.getTimeline(projectId, authentication.getUserId(), fileId));
   }
 
   @GetMapping("/{versionId}")

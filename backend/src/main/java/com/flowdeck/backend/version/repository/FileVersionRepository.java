@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface FileVersionRepository extends JpaRepository<FileVersion, Long> {
 
+  List<FileVersion> findAllByFileOrderByVersionNumberAsc(ProjectFile file);
+
   List<FileVersion> findAllByFileOrderByVersionNumberDesc(ProjectFile file);
 
   Optional<FileVersion> findByFileAndId(ProjectFile file, Long id);
