@@ -2,6 +2,7 @@ package com.flowdeck.backend.version.repository;
 
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.version.domain.FileVersion;
+import com.flowdeck.backend.version.dto.FileTimelineVersionProjection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,19 @@ import org.springframework.data.repository.query.Param;
 public interface FileVersionRepository extends JpaRepository<FileVersion, Long> {
 
   List<FileVersion> findAllByFileOrderByVersionNumberAsc(ProjectFile file);
+
+  @Query(
+      """
+      select version.id as id,
+             version.versionNumber as versionNumber,
+             version.changeMessage as changeMessage,
+             version.userId as userId,
+             version.createdAt as createdAt
+      from FileVersion version
+      where version.file = :file
+      order by version.versionNumber asc
+      """)
+  List<FileTimelineVersionProjection> findTimelineVersionsByFile(@Param("file") ProjectFile file);
 
   List<FileVersion> findAllByFileOrderByVersionNumberDesc(ProjectFile file);
 
