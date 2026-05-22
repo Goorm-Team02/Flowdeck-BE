@@ -318,7 +318,7 @@ GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to
 ## 6-1. 파일 타임라인 조회
 
 ```http
-GET /api/projects/{projectId}/files/{fileId}/versions/timeline
+GET /api/projects/{projectId}/files/{fileId}/versions/timeline?page=0&size=20
 ```
 
 ### 목적
@@ -327,13 +327,23 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
 
 프론트는 이 응답으로 초기 목록 화면을 그리고, 사용자가 버전을 클릭하면 기존 `버전 상세 조회 API`와 `버전 diff 조회 API`를 조합해 화면을 갱신합니다.
 
+### Query parameters
+
+| name | type | required | default | max | description |
+| --- | --- | --- | --- | --- | --- |
+| `page` | number | false | 0 | - | 0부터 시작하는 페이지 번호 |
+| `size` | number | false | 20 | 100 | 한 페이지에 조회할 버전 수 |
+
 ### Response data
 
 ```json
 {
   "fileId": 1,
   "fileName": "Editor.jsx",
-  "totalVersions": 2,
+  "totalVersions": 125,
+  "page": 0,
+  "size": 20,
+  "hasNext": true,
   "versions": [
     {
       "versionId": 11,
@@ -357,12 +367,17 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
 
 ### 동작
 
-- `versions`는 오래된 버전부터 최신 버전까지 오름차순으로 정렬합니다.
+- `versions`는 요청한 페이지 범위 안에서 오래된 버전부터 최신 버전까지 오름차순으로 정렬합니다.
+- `size`는 최대 100으로 제한합니다.
+- `totalVersions`는 전체 버전 수이며 매 페이지 응답에 포함합니다.
+- `hasNext`는 현재 페이지 뒤에 추가 페이지가 있는지 여부입니다.
+- 요청한 페이지가 마지막 페이지를 초과하면 `totalVersions`는 유지하고 `versions = []`, `hasNext = false`로 응답합니다.
 - 이 API는 초기 진입 성능을 위해 버전 `content`와 diff 결과를 포함하지 않습니다.
 - 버전 내용은 `GET /api/projects/{projectId}/files/{fileId}/versions/{versionId}`로 조회합니다.
 - 버전 diff는 `GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to={toVersion}`로 조회합니다.
-- 버전이 하나도 없는 파일은 `totalVersions = 0`, `versions = []`로 응답합니다.
+- 버전이 하나도 없는 파일은 `totalVersions = 0`, `hasNext = false`, `versions = []`로 응답합니다.
 - `createdByName`은 작성자 정보가 없으면 `시스템`, 작성자 ID는 있으나 사용자 정보를 찾지 못하면 `알 수 없음`으로 응답합니다.
+- 현재는 `Page` 기반으로 `totalVersions`와 `hasNext`를 함께 제공합니다. 버전 수가 매우 많아져 `count query` 비용이 문제가 되면 `Slice` 또는 cursor 기반 조회로 전환을 검토합니다.
 
 ---
 

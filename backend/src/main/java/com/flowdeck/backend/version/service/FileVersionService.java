@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,9 @@ public class FileVersionService {
 
   private static final String SYSTEM_ACTOR_NAME = "시스템";
   private static final String UNKNOWN_ACTOR_NAME = "알 수 없음";
+  private static final int DEFAULT_TIMELINE_PAGE = 0;
+  private static final int DEFAULT_TIMELINE_SIZE = 20;
+  private static final int MAX_TIMELINE_SIZE = 100;
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -96,27 +101,33 @@ public class FileVersionService {
   }
 
   @Transactional(readOnly = true)
-  public FileTimelineResponse getTimeline(String projectId, Long userId, Long fileId) {
+  public FileTimelineResponse getTimeline(
+      String projectId, Long userId, Long fileId, int page, int size) {
     permissionService.validateProjectAccess(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
-    List<FileTimelineVersionProjection> versions =
-        fileVersionRepository.findTimelineVersionsByFile(file);
+    int normalizedPage = normalizeTimelinePage(page);
+    int normalizedSize = normalizeTimelineSize(size);
+    Page<FileTimelineVersionProjection> versions =
+        fileVersionRepository.findTimelineVersionsByFile(
+            file, PageRequest.of(normalizedPage, normalizedSize));
 
-    if (versions.isEmpty()) {
-      return FileTimelineResponse.empty(file);
-    }
-
-    Map<Long, String> creatorNames = creatorNames(versions);
+    Map<Long, String> creatorNames = creatorNames(versions.getContent());
     List<FileTimelineVersionResponse> timelineVersions =
-        versions.stream()
+        versions.getContent().stream()
             .map(
                 version ->
                     FileTimelineVersionResponse.from(
                         version, resolveCreatorName(version.getUserId(), creatorNames)))
             .toList();
 
-    return FileTimelineResponse.from(file, timelineVersions);
+    return FileTimelineResponse.from(
+        file,
+        versions.getTotalElements(),
+        normalizedPage,
+        normalizedSize,
+        versions.hasNext(),
+        timelineVersions);
   }
 
   @Transactional
@@ -381,6 +392,18 @@ public class FileVersionService {
 
   private int countType(List<DiffLineResponse> changes, String type) {
     return (int) changes.stream().filter(change -> type.equals(change.type())).count();
+  }
+
+  private int normalizeTimelinePage(int page) {
+    return Math.max(page, DEFAULT_TIMELINE_PAGE);
+  }
+
+  private int normalizeTimelineSize(int size) {
+    if (size < 1) {
+      return DEFAULT_TIMELINE_SIZE;
+    }
+
+    return Math.min(size, MAX_TIMELINE_SIZE);
   }
 
   private Map<Long, String> creatorNames(Collection<FileTimelineVersionProjection> versions) {

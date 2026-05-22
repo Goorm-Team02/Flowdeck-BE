@@ -4,14 +4,22 @@ import com.flowdeck.backend.file.domain.ProjectFile;
 import java.util.List;
 
 public record FileTimelineResponse(
-    Long fileId, String fileName, int totalVersions, List<FileTimelineVersionResponse> versions) {
-
-  public static FileTimelineResponse empty(ProjectFile file) {
-    return new FileTimelineResponse(file.getId(), file.getName(), 0, List.of());
-  }
+    Long fileId,
+    String fileName,
+    long totalVersions,
+    int page,
+    int size,
+    boolean hasNext,
+    List<FileTimelineVersionResponse> versions) {
 
   public static FileTimelineResponse from(
-      ProjectFile file, List<FileTimelineVersionResponse> versions) {
-    return new FileTimelineResponse(file.getId(), file.getName(), versions.size(), versions);
+      ProjectFile file,
+      long totalVersions,
+      int page,
+      int size,
+      boolean hasNext,
+      List<FileTimelineVersionResponse> versions) {
+    return new FileTimelineResponse(
+        file.getId(), file.getName(), totalVersions, page, size, hasNext, versions);
   }
 }

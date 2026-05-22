@@ -178,6 +178,9 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
         .andExpect(jsonPath("$.data.fileId").value(fixture.file().getId()))
         .andExpect(jsonPath("$.data.fileName").value("Editor.jsx"))
         .andExpect(jsonPath("$.data.totalVersions").value(2))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(20))
+        .andExpect(jsonPath("$.data.hasNext").value(false))
         .andExpect(jsonPath("$.data.versions[0].versionNumber").value(1))
         .andExpect(jsonPath("$.data.versions[0].changeMessage").value("최초 생성"))
         .andExpect(jsonPath("$.data.versions[0].createdByName").value("owner"))
@@ -211,6 +214,9 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.fileId").value(fixture.file().getId()))
         .andExpect(jsonPath("$.data.totalVersions").value(0))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(20))
+        .andExpect(jsonPath("$.data.hasNext").value(false))
         .andExpect(jsonPath("$.data.versions.length()").value(0));
   }
 
