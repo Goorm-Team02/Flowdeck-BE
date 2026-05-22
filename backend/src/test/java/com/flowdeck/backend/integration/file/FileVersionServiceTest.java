@@ -312,7 +312,28 @@ class FileVersionServiceTest {
   }
 
   @Test
-  void getTimelineReturnsLatestSelectedVersionAndCardSummaries() {
+  void getDiffReturnsOnlyUnchangedLinesWhenContentsAreEqual() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "same-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()",
+            "const editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isZero();
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getTimelineReturnsVersionMetadataWithoutLoadingContentAndDiff() {
     Project project =
         projectRepository.save(
             new Project("timeline project", "description", ProjectVisibility.PRIVATE));
@@ -356,25 +377,14 @@ class FileVersionServiceTest {
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.fileName()).isEqualTo("Editor.jsx");
     assertThat(response.totalVersions()).isEqualTo(2);
-    assertThat(response.selectedVersion()).isNotNull();
-    assertThat(response.selectedVersion().versionNumber()).isEqualTo(2);
-    assertThat(response.selectedVersion().createdBy()).isEqualTo(editor.getId());
-    assertThat(response.selectedVersion().createdByName()).isEqualTo("김철수");
-    assertThat(response.selectedVersion().content()).contains("MonacoEditor");
-    assertThat(response.selectedVersion().addedLinesFromPrevious()).isEqualTo(2);
-    assertThat(response.selectedVersion().removedLinesFromPrevious()).isEqualTo(1);
-    assertThat(response.diffFromPrevious()).isNotNull();
-    assertThat(response.diffFromPrevious().fromVersion()).isEqualTo(1);
-    assertThat(response.diffFromPrevious().toVersion()).isEqualTo(2);
-    assertThat(response.diffFromPrevious().addedLines()).isEqualTo(2);
-    assertThat(response.diffFromPrevious().removedLines()).isEqualTo(1);
     assertThat(response.versions())
         .extracting(
             version -> version.versionNumber(),
-            version -> version.createdByName(),
-            version -> version.addedLinesFromPrevious(),
-            version -> version.removedLinesFromPrevious())
-        .containsExactly(tuple(1, "홍길동", null, null), tuple(2, "김철수", 2, 1));
+            version -> version.changeMessage(),
+            version -> version.createdBy(),
+            version -> version.createdByName())
+        .containsExactly(
+            tuple(1, "최초 생성", owner.getId(), "홍길동"), tuple(2, "Monaco 연결", editor.getId(), "김철수"));
   }
 
   @Test
@@ -394,8 +404,6 @@ class FileVersionServiceTest {
 
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.totalVersions()).isZero();
-    assertThat(response.selectedVersion()).isNull();
-    assertThat(response.diffFromPrevious()).isNull();
     assertThat(response.versions()).isEmpty();
   }
 
@@ -421,7 +429,6 @@ class FileVersionServiceTest {
     assertThat(response.versions())
         .extracting(version -> version.versionNumber(), version -> version.createdByName())
         .containsExactly(tuple(1, "시스템"), tuple(2, "알 수 없음"));
-    assertThat(response.selectedVersion().createdByName()).isEqualTo("알 수 없음");
   }
 
   private FileVersionCreateRequest createVersionRequest(String changeMessage) {

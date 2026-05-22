@@ -308,7 +308,7 @@ GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to
 
 - 서버는 두 버전의 `content`를 조회 시점에 비교합니다.
 - 파일 버전은 전체 스냅샷으로 저장하며 diff 결과를 별도 테이블에 저장하지 않습니다.
-- LCS 기반 라인 diff로 중간 삽입/삭제 이후의 동일 라인을 `UNCHANGED`로 정렬합니다.
+- Myers 기반 라인 diff로 중간 삽입/삭제 이후의 동일 라인을 `UNCHANGED`로 정렬합니다.
 - 한 줄 내용 변경은 `REMOVED` 1줄과 `ADDED` 1줄로 응답합니다.
 - `addedLines`와 `removedLines`는 각각 `ADDED`, `REMOVED` 라인 수입니다.
 - 비교 대상 버전이 없으면 `VERSION_404`를 반환합니다.
@@ -323,9 +323,9 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
 
 ### 목적
 
-타임라인 모달 최초 진입 시 필요한 버전 카드 목록, 최신 선택 버전 코드, 최신 버전의 이전 버전 대비 diff 요약을 한 번에 조회합니다.
+타임라인 모달 최초 진입 시 필요한 버전 카드 메타데이터 목록을 조회합니다.
 
-프론트는 이 응답으로 초기 화면을 그리고, 이후 다른 버전을 클릭하면 기존 `버전 상세 조회 API`와 `버전 diff 조회 API`를 조합해 화면을 갱신합니다.
+프론트는 이 응답으로 초기 목록 화면을 그리고, 사용자가 버전을 클릭하면 기존 `버전 상세 조회 API`와 `버전 diff 조회 API`를 조합해 화면을 갱신합니다.
 
 ### Response data
 
@@ -334,31 +334,6 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
   "fileId": 1,
   "fileName": "Editor.jsx",
   "totalVersions": 2,
-  "selectedVersion": {
-    "versionId": 12,
-    "versionNumber": 2,
-    "changeMessage": "Monaco 연결",
-    "createdBy": 7,
-    "createdByName": "김철수",
-    "createdAt": "2026-05-19T10:15:00Z",
-    "content": "import React from 'react'\nimport MonacoEditor from '@monaco-editor/react'\n...",
-    "addedLinesFromPrevious": 2,
-    "removedLinesFromPrevious": 1
-  },
-  "diffFromPrevious": {
-    "fromVersion": 1,
-    "toVersion": 2,
-    "addedLines": 2,
-    "removedLines": 1,
-    "changes": [
-      {
-        "type": "UNCHANGED",
-        "oldLineNumber": 1,
-        "newLineNumber": 1,
-        "content": "import React from 'react'"
-      }
-    ]
-  },
   "versions": [
     {
       "versionId": 11,
@@ -366,9 +341,7 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
       "changeMessage": "최초 생성",
       "createdBy": 3,
       "createdByName": "홍길동",
-      "createdAt": "2026-05-19T10:00:00Z",
-      "addedLinesFromPrevious": null,
-      "removedLinesFromPrevious": null
+      "createdAt": "2026-05-19T10:00:00Z"
     },
     {
       "versionId": 12,
@@ -376,9 +349,7 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
       "changeMessage": "Monaco 연결",
       "createdBy": 7,
       "createdByName": "김철수",
-      "createdAt": "2026-05-19T10:15:00Z",
-      "addedLinesFromPrevious": 2,
-      "removedLinesFromPrevious": 1
+      "createdAt": "2026-05-19T10:15:00Z"
     }
   ]
 }
@@ -387,10 +358,10 @@ GET /api/projects/{projectId}/files/{fileId}/versions/timeline
 ### 동작
 
 - `versions`는 오래된 버전부터 최신 버전까지 오름차순으로 정렬합니다.
-- `selectedVersion`은 항상 최신 버전입니다.
-- `diffFromPrevious`는 최신 버전과 직전 버전의 비교 결과입니다.
-- 첫 버전은 비교 기준이 없으므로 `addedLinesFromPrevious`, `removedLinesFromPrevious`, `diffFromPrevious`가 `null`일 수 있습니다.
-- 버전이 하나도 없는 파일은 `totalVersions = 0`, `selectedVersion = null`, `versions = []`로 응답합니다.
+- 이 API는 초기 진입 성능을 위해 버전 `content`와 diff 결과를 포함하지 않습니다.
+- 버전 내용은 `GET /api/projects/{projectId}/files/{fileId}/versions/{versionId}`로 조회합니다.
+- 버전 diff는 `GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to={toVersion}`로 조회합니다.
+- 버전이 하나도 없는 파일은 `totalVersions = 0`, `versions = []`로 응답합니다.
 - `createdByName`은 작성자 정보가 없으면 `시스템`, 작성자 ID는 있으나 사용자 정보를 찾지 못하면 `알 수 없음`으로 응답합니다.
 
 ---

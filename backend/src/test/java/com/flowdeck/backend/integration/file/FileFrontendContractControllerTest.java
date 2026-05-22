@@ -138,7 +138,7 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   }
 
   @Test
-  void getTimelineReturnsDataForInitialTimelineView() throws Exception {
+  void getTimelineReturnsVersionMetadataForInitialTimelineView() throws Exception {
     FileFixture fixture =
         createOwnerFile(
             "timeline frontend project", "timeline-frontend-owner@test.com", "Editor.jsx", null, 0);
@@ -178,25 +178,16 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
         .andExpect(jsonPath("$.data.fileId").value(fixture.file().getId()))
         .andExpect(jsonPath("$.data.fileName").value("Editor.jsx"))
         .andExpect(jsonPath("$.data.totalVersions").value(2))
-        .andExpect(jsonPath("$.data.selectedVersion.versionNumber").value(2))
-        .andExpect(jsonPath("$.data.selectedVersion.changeMessage").value("Monaco 연결"))
-        .andExpect(jsonPath("$.data.selectedVersion.createdByName").value("owner"))
-        .andExpect(
-            jsonPath("$.data.selectedVersion.content")
-                .value(org.hamcrest.Matchers.containsString("MonacoEditor")))
-        .andExpect(jsonPath("$.data.selectedVersion.addedLinesFromPrevious").value(2))
-        .andExpect(jsonPath("$.data.selectedVersion.removedLinesFromPrevious").value(1))
-        .andExpect(jsonPath("$.data.diffFromPrevious.fromVersion").value(1))
-        .andExpect(jsonPath("$.data.diffFromPrevious.toVersion").value(2))
-        .andExpect(jsonPath("$.data.diffFromPrevious.addedLines").value(2))
-        .andExpect(jsonPath("$.data.diffFromPrevious.removedLines").value(1))
         .andExpect(jsonPath("$.data.versions[0].versionNumber").value(1))
-        .andExpect(
-            jsonPath("$.data.versions[0].addedLinesFromPrevious")
-                .value(org.hamcrest.Matchers.nullValue()))
+        .andExpect(jsonPath("$.data.versions[0].changeMessage").value("최초 생성"))
+        .andExpect(jsonPath("$.data.versions[0].createdByName").value("owner"))
         .andExpect(jsonPath("$.data.versions[1].versionNumber").value(2))
-        .andExpect(jsonPath("$.data.versions[1].addedLinesFromPrevious").value(2))
-        .andExpect(jsonPath("$.data.versions[1].removedLinesFromPrevious").value(1));
+        .andExpect(jsonPath("$.data.versions[1].changeMessage").value("Monaco 연결"))
+        .andExpect(jsonPath("$.data.versions[1].createdByName").value("owner"))
+        .andExpect(jsonPath("$.data.selectedVersion").doesNotExist())
+        .andExpect(jsonPath("$.data.diffFromPrevious").doesNotExist())
+        .andExpect(jsonPath("$.data.versions[0].addedLinesFromPrevious").doesNotExist())
+        .andExpect(jsonPath("$.data.versions[1].removedLinesFromPrevious").doesNotExist());
   }
 
   @Test
@@ -220,8 +211,6 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.fileId").value(fixture.file().getId()))
         .andExpect(jsonPath("$.data.totalVersions").value(0))
-        .andExpect(jsonPath("$.data.selectedVersion").value(org.hamcrest.Matchers.nullValue()))
-        .andExpect(jsonPath("$.data.diffFromPrevious").value(org.hamcrest.Matchers.nullValue()))
         .andExpect(jsonPath("$.data.versions.length()").value(0));
   }
 

@@ -62,8 +62,7 @@ public class FileVersionController {
   @GetMapping("/timeline")
   @Operation(
       summary = "파일 타임라인 조회",
-      description =
-          "버전 카드 목록, 최신 버전 코드, 최신 버전의 이전 버전 대비 diff 요약을 한 번에 조회합니다. " + "타임라인 모달 초기 진입 시 사용합니다.")
+      description = "타임라인 모달 초기 진입에 필요한 버전 메타데이터 목록을 조회합니다. " + "코드 내용과 diff는 상세 API에서 조회합니다.")
   public ApiResponse<FileTimelineResponse> getTimeline(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,

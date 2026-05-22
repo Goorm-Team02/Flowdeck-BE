@@ -14,11 +14,11 @@ import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
+import com.flowdeck.backend.version.dto.DiffOperation;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileTimelineResponse;
-import com.flowdeck.backend.version.dto.FileTimelineSelectedVersionResponse;
+import com.flowdeck.backend.version.dto.FileTimelineVersionProjection;
 import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
-import com.flowdeck.backend.version.dto.FileVersionChangeSummary;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
@@ -30,6 +30,7 @@ import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,43 +100,23 @@ public class FileVersionService {
     permissionService.validateProjectAccess(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
-    List<FileVersion> versions = fileVersionRepository.findAllByFileOrderByVersionNumberAsc(file);
+    List<FileTimelineVersionProjection> versions =
+        fileVersionRepository.findTimelineVersionsByFile(file);
 
     if (versions.isEmpty()) {
       return FileTimelineResponse.empty(file);
     }
 
     Map<Long, String> creatorNames = creatorNames(versions);
-    Map<Integer, FileVersionChangeSummary> changeSummaries =
-        createTimelineChangeSummaries(versions);
-    FileVersion selectedVersion = versions.get(versions.size() - 1);
-    FileVersionChangeSummary selectedSummary =
-        changeSummaries.get(selectedVersion.getVersionNumber());
-    FileVersionDiffResponse diffFromPrevious = createDiffFromPrevious(selectedVersion, versions);
-
     List<FileTimelineVersionResponse> timelineVersions =
         versions.stream()
             .map(
-                version -> {
-                  FileVersionChangeSummary summary =
-                      changeSummaries.get(version.getVersionNumber());
-                  return FileTimelineVersionResponse.from(
-                      version,
-                      resolveCreatorName(version.getUserId(), creatorNames),
-                      summary == null ? null : summary.addedLines(),
-                      summary == null ? null : summary.removedLines());
-                })
+                version ->
+                    FileTimelineVersionResponse.from(
+                        version, resolveCreatorName(version.getUserId(), creatorNames)))
             .toList();
 
-    FileTimelineSelectedVersionResponse timelineSelectedVersion =
-        FileTimelineSelectedVersionResponse.from(
-            selectedVersion,
-            resolveCreatorName(selectedVersion.getUserId(), creatorNames),
-            selectedSummary == null ? null : selectedSummary.addedLines(),
-            selectedSummary == null ? null : selectedSummary.removedLines());
-
-    return FileTimelineResponse.from(
-        file, timelineSelectedVersion, diffFromPrevious, timelineVersions);
+    return FileTimelineResponse.from(file, timelineVersions);
   }
 
   @Transactional
@@ -243,56 +224,134 @@ public class FileVersionService {
     String[] oldLines = oldContent.split("\\R", -1);
     String[] newLines = newContent.split("\\R", -1);
 
-    int[][] lcsLengths = createLcsLengths(oldLines, newLines);
     List<DiffLineResponse> changes = new ArrayList<>();
+    List<DiffOperation> operations = createMyersOperations(oldLines, newLines);
 
     int oldIndex = 0;
     int newIndex = 0;
-    while (oldIndex < oldLines.length && newIndex < newLines.length) {
-      String oldLine = oldLines[oldIndex];
-      String newLine = newLines[newIndex];
 
-      if (oldLine.equals(newLine)) {
-        changes.add(new DiffLineResponse("UNCHANGED", oldIndex + 1, newIndex + 1, newLine));
+    for (DiffOperation operation : operations) {
+      if ("UNCHANGED".equals(operation.type())) {
+        changes.add(
+            new DiffLineResponse(
+                operation.type(), oldIndex + 1, newIndex + 1, operation.content()));
         oldIndex++;
         newIndex++;
-      } else if (lcsLengths[oldIndex + 1][newIndex] >= lcsLengths[oldIndex][newIndex + 1]) {
-        changes.add(new DiffLineResponse("REMOVED", oldIndex + 1, null, oldLine));
+      } else if ("REMOVED".equals(operation.type())) {
+        changes.add(
+            new DiffLineResponse(operation.type(), oldIndex + 1, null, operation.content()));
         oldIndex++;
       } else {
-        changes.add(new DiffLineResponse("ADDED", null, newIndex + 1, newLine));
+        changes.add(
+            new DiffLineResponse(operation.type(), null, newIndex + 1, operation.content()));
         newIndex++;
       }
-    }
-
-    while (oldIndex < oldLines.length) {
-      changes.add(new DiffLineResponse("REMOVED", oldIndex + 1, null, oldLines[oldIndex]));
-      oldIndex++;
-    }
-
-    while (newIndex < newLines.length) {
-      changes.add(new DiffLineResponse("ADDED", null, newIndex + 1, newLines[newIndex]));
-      newIndex++;
     }
 
     return changes;
   }
 
-  private int[][] createLcsLengths(String[] oldLines, String[] newLines) {
-    int[][] lengths = new int[oldLines.length + 1][newLines.length + 1];
+  private List<DiffOperation> createMyersOperations(String[] oldLines, String[] newLines) {
+    if (oldLines.length == 0 && newLines.length == 0) {
+      return List.of();
+    }
 
-    for (int oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex--) {
-      for (int newIndex = newLines.length - 1; newIndex >= 0; newIndex--) {
-        if (oldLines[oldIndex].equals(newLines[newIndex])) {
-          lengths[oldIndex][newIndex] = lengths[oldIndex + 1][newIndex + 1] + 1;
+    int maxDistance = oldLines.length + newLines.length;
+    List<Map<Integer, Integer>> trace = new ArrayList<>();
+    Map<Integer, Integer> furthestXByDiagonal = new HashMap<>();
+    furthestXByDiagonal.put(1, 0);
+
+    for (int distance = 0; distance <= maxDistance; distance++) {
+      trace.add(Map.copyOf(furthestXByDiagonal));
+      Map<Integer, Integer> nextFurthestXByDiagonal = new HashMap<>();
+
+      for (int diagonal = -distance; diagonal <= distance; diagonal += 2) {
+        int x;
+        if (diagonal == -distance
+            || (diagonal != distance
+                && getFurthestX(furthestXByDiagonal, diagonal - 1)
+                    < getFurthestX(furthestXByDiagonal, diagonal + 1))) {
+          x = getFurthestX(furthestXByDiagonal, diagonal + 1);
         } else {
-          lengths[oldIndex][newIndex] =
-              Math.max(lengths[oldIndex + 1][newIndex], lengths[oldIndex][newIndex + 1]);
+          x = getFurthestX(furthestXByDiagonal, diagonal - 1) + 1;
         }
+
+        int y = x - diagonal;
+        while (x < oldLines.length && y < newLines.length && oldLines[x].equals(newLines[y])) {
+          x++;
+          y++;
+        }
+
+        nextFurthestXByDiagonal.put(diagonal, x);
+        if (x >= oldLines.length && y >= newLines.length) {
+          return backtrackMyersOperations(trace, oldLines, newLines, distance);
+        }
+      }
+
+      furthestXByDiagonal = nextFurthestXByDiagonal;
+    }
+
+    throw new IllegalStateException("Failed to calculate file version diff.");
+  }
+
+  private int getFurthestX(Map<Integer, Integer> furthestXByDiagonal, int diagonal) {
+    return furthestXByDiagonal.getOrDefault(diagonal, Integer.MIN_VALUE / 2);
+  }
+
+  private List<DiffOperation> backtrackMyersOperations(
+      List<Map<Integer, Integer>> trace, String[] oldLines, String[] newLines, int distance) {
+    List<DiffOperation> operations = new ArrayList<>();
+    int x = oldLines.length;
+    int y = newLines.length;
+
+    for (int currentDistance = distance; currentDistance > 0; currentDistance--) {
+      Map<Integer, Integer> previousFurthestXByDiagonal = trace.get(currentDistance);
+      int diagonal = x - y;
+      int previousDiagonal;
+
+      if (diagonal == -currentDistance
+          || (diagonal != currentDistance
+              && getFurthestX(previousFurthestXByDiagonal, diagonal - 1)
+                  < getFurthestX(previousFurthestXByDiagonal, diagonal + 1))) {
+        previousDiagonal = diagonal + 1;
+      } else {
+        previousDiagonal = diagonal - 1;
+      }
+
+      int previousX = getFurthestX(previousFurthestXByDiagonal, previousDiagonal);
+      int previousY = previousX - previousDiagonal;
+
+      while (x > previousX && y > previousY) {
+        operations.add(new DiffOperation("UNCHANGED", oldLines[x - 1]));
+        x--;
+        y--;
+      }
+
+      if (x == previousX) {
+        operations.add(new DiffOperation("ADDED", newLines[y - 1]));
+        y--;
+      } else {
+        operations.add(new DiffOperation("REMOVED", oldLines[x - 1]));
+        x--;
       }
     }
 
-    return lengths;
+    while (x > 0 && y > 0) {
+      operations.add(new DiffOperation("UNCHANGED", oldLines[x - 1]));
+      x--;
+      y--;
+    }
+    while (x > 0) {
+      operations.add(new DiffOperation("REMOVED", oldLines[x - 1]));
+      x--;
+    }
+    while (y > 0) {
+      operations.add(new DiffOperation("ADDED", newLines[y - 1]));
+      y--;
+    }
+
+    Collections.reverse(operations);
+    return preferRemovedBeforeAdded(operations);
   }
 
   private FileVersionDiffResponse createDiffResponse(FileVersion from, FileVersion to) {
@@ -304,78 +363,33 @@ public class FileVersionService {
         from.getVersionNumber(), to.getVersionNumber(), addedLines, removedLines, changes);
   }
 
-  private Map<Integer, FileVersionChangeSummary> createTimelineChangeSummaries(
-      List<FileVersion> versions) {
-    Map<Integer, FileVersionChangeSummary> summaries = new HashMap<>();
+  private List<DiffOperation> preferRemovedBeforeAdded(List<DiffOperation> operations) {
+    List<DiffOperation> orderedOperations = new ArrayList<>(operations);
 
-    for (int index = 1; index < versions.size(); index++) {
-      FileVersion previousVersion = versions.get(index - 1);
-      FileVersion currentVersion = versions.get(index);
-      summaries.put(
-          currentVersion.getVersionNumber(),
-          createChangeSummary(previousVersion.getContent(), currentVersion.getContent()));
-    }
-
-    return summaries;
-  }
-
-  private FileVersionDiffResponse createDiffFromPrevious(
-      FileVersion selectedVersion, List<FileVersion> versions) {
-    for (int index = 0; index < versions.size(); index++) {
-      FileVersion version = versions.get(index);
-      if (version.getVersionNumber() != selectedVersion.getVersionNumber()) {
-        continue;
-      }
-
-      if (index == 0) {
-        return null;
-      }
-
-      return createDiffResponse(versions.get(index - 1), version);
-    }
-
-    throw new BusinessException(ErrorCode.VERSION_NOT_FOUND);
-  }
-
-  private FileVersionChangeSummary createChangeSummary(String oldContent, String newContent) {
-    String[] oldLines = oldContent.split("\\R", -1);
-    String[] newLines = newContent.split("\\R", -1);
-
-    int[][] lcsLengths = createLcsLengths(oldLines, newLines);
-    int oldIndex = 0;
-    int newIndex = 0;
-    int addedLines = 0;
-    int removedLines = 0;
-
-    while (oldIndex < oldLines.length && newIndex < newLines.length) {
-      String oldLine = oldLines[oldIndex];
-      String newLine = newLines[newIndex];
-
-      if (oldLine.equals(newLine)) {
-        oldIndex++;
-        newIndex++;
-      } else if (lcsLengths[oldIndex + 1][newIndex] >= lcsLengths[oldIndex][newIndex + 1]) {
-        removedLines++;
-        oldIndex++;
-      } else {
-        addedLines++;
-        newIndex++;
+    for (int index = 0; index < orderedOperations.size() - 1; index++) {
+      DiffOperation current = orderedOperations.get(index);
+      DiffOperation next = orderedOperations.get(index + 1);
+      if ("ADDED".equals(current.type()) && "REMOVED".equals(next.type())) {
+        orderedOperations.set(index, next);
+        orderedOperations.set(index + 1, current);
+        index++;
       }
     }
 
-    removedLines += oldLines.length - oldIndex;
-    addedLines += newLines.length - newIndex;
-
-    return new FileVersionChangeSummary(addedLines, removedLines);
+    return orderedOperations;
   }
 
   private int countType(List<DiffLineResponse> changes, String type) {
     return (int) changes.stream().filter(change -> type.equals(change.type())).count();
   }
 
-  private Map<Long, String> creatorNames(Collection<FileVersion> versions) {
+  private Map<Long, String> creatorNames(Collection<FileTimelineVersionProjection> versions) {
     List<Long> userIds =
-        versions.stream().map(FileVersion::getUserId).filter(Objects::nonNull).distinct().toList();
+        versions.stream()
+            .map(FileTimelineVersionProjection::getUserId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
 
     if (userIds.isEmpty()) {
       return Map.of();
