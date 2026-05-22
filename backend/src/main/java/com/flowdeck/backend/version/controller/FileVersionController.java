@@ -66,9 +66,11 @@ public class FileVersionController {
   public ApiResponse<FileTimelineResponse> getTimeline(
       @PathVariable String projectId,
       @AuthenticationPrincipal JwtAuthentication authentication,
-      @PathVariable Long fileId) {
+      @PathVariable Long fileId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
     return ApiResponse.success(
-        fileVersionService.getTimeline(projectId, authentication.getUserId(), fileId));
+        fileVersionService.getTimeline(projectId, authentication.getUserId(), fileId, page, size));
   }
 
   @GetMapping("/{versionId}")

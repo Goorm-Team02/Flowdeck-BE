@@ -5,6 +5,8 @@ import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.FileTimelineVersionProjection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,17 +17,25 @@ public interface FileVersionRepository extends JpaRepository<FileVersion, Long> 
   List<FileVersion> findAllByFileOrderByVersionNumberAsc(ProjectFile file);
 
   @Query(
-      """
-      select version.id as id,
-             version.versionNumber as versionNumber,
-             version.changeMessage as changeMessage,
-             version.userId as userId,
-             version.createdAt as createdAt
-      from FileVersion version
-      where version.file = :file
-      order by version.versionNumber asc
-      """)
-  List<FileTimelineVersionProjection> findTimelineVersionsByFile(@Param("file") ProjectFile file);
+      value =
+          """
+          select version.id as id,
+                 version.versionNumber as versionNumber,
+                 version.changeMessage as changeMessage,
+                 version.userId as userId,
+                 version.createdAt as createdAt
+          from FileVersion version
+          where version.file = :file
+          order by version.versionNumber asc
+          """,
+      countQuery =
+          """
+          select count(version)
+          from FileVersion version
+          where version.file = :file
+          """)
+  Page<FileTimelineVersionProjection> findTimelineVersionsByFile(
+      @Param("file") ProjectFile file, Pageable pageable);
 
   List<FileVersion> findAllByFileOrderByVersionNumberDesc(ProjectFile file);
 

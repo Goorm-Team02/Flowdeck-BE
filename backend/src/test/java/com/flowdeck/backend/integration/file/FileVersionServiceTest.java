@@ -22,6 +22,7 @@ import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.DiffLineResponse;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.dto.FileTimelineResponse;
+import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
@@ -372,11 +373,14 @@ class FileVersionServiceTest {
             "Monaco 연결"));
 
     FileTimelineResponse response =
-        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId());
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId(), 0, 200);
 
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.fileName()).isEqualTo("Editor.jsx");
     assertThat(response.totalVersions()).isEqualTo(2);
+    assertThat(response.page()).isZero();
+    assertThat(response.size()).isEqualTo(100);
+    assertThat(response.hasNext()).isFalse();
     assertThat(response.versions())
         .extracting(
             version -> version.versionNumber(),
@@ -385,6 +389,52 @@ class FileVersionServiceTest {
             version -> version.createdByName())
         .containsExactly(
             tuple(1, "최초 생성", owner.getId(), "홍길동"), tuple(2, "Monaco 연결", editor.getId(), "김철수"));
+  }
+
+  @Test
+  void getTimelineReturnsRequestedPageAndHasNext() {
+    Project project =
+        projectRepository.save(
+            new Project("timeline page project", "description", ProjectVisibility.PRIVATE));
+    User owner = userRepository.save(new User("timeline-page-owner@test.com", "password", "owner"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Editor.jsx", FileType.FILE));
+    for (int versionNumber = 1; versionNumber <= 5; versionNumber++) {
+      fileVersionRepository.save(
+          new FileVersion(
+              file, owner.getId(), versionNumber, "line " + versionNumber, "v" + versionNumber));
+    }
+
+    FileTimelineResponse firstPage =
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId(), 0, 2);
+    FileTimelineResponse lastPage =
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId(), 2, 2);
+    FileTimelineResponse overPage =
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId(), 3, 2);
+
+    assertThat(firstPage.totalVersions()).isEqualTo(5);
+    assertThat(firstPage.page()).isZero();
+    assertThat(firstPage.size()).isEqualTo(2);
+    assertThat(firstPage.hasNext()).isTrue();
+    assertThat(firstPage.versions())
+        .extracting(FileTimelineVersionResponse::versionNumber)
+        .containsExactly(1, 2);
+
+    assertThat(lastPage.totalVersions()).isEqualTo(5);
+    assertThat(lastPage.page()).isEqualTo(2);
+    assertThat(lastPage.size()).isEqualTo(2);
+    assertThat(lastPage.hasNext()).isFalse();
+    assertThat(lastPage.versions())
+        .extracting(FileTimelineVersionResponse::versionNumber)
+        .containsExactly(5);
+
+    assertThat(overPage.totalVersions()).isEqualTo(5);
+    assertThat(overPage.page()).isEqualTo(3);
+    assertThat(overPage.size()).isEqualTo(2);
+    assertThat(overPage.hasNext()).isFalse();
+    assertThat(overPage.versions()).isEmpty();
   }
 
   @Test
@@ -400,10 +450,13 @@ class FileVersionServiceTest {
         projectFileRepository.save(new ProjectFile(project, null, "Empty.java", FileType.FILE));
 
     FileTimelineResponse response =
-        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId());
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId(), -1, 0);
 
     assertThat(response.fileId()).isEqualTo(file.getId());
     assertThat(response.totalVersions()).isZero();
+    assertThat(response.page()).isZero();
+    assertThat(response.size()).isEqualTo(20);
+    assertThat(response.hasNext()).isFalse();
     assertThat(response.versions()).isEmpty();
   }
 
@@ -424,7 +477,7 @@ class FileVersionServiceTest {
         new FileVersion(file, 999_999L, 2, "line 1\nline 2", "unknown actor"));
 
     FileTimelineResponse response =
-        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId());
+        fileVersionService.getTimeline(project.getPublicId(), owner.getId(), file.getId(), 0, 20);
 
     assertThat(response.versions())
         .extracting(version -> version.versionNumber(), version -> version.createdByName())
