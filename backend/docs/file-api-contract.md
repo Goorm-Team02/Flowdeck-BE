@@ -304,6 +304,35 @@ GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to
 | `ADDED` | `to` 버전에 새로 추가된 라인 |
 | `REMOVED` | `from` 버전에서 제거된 라인 |
 
+### 제한 초과 응답
+
+diff 대상 버전 중 하나라도 제한을 초과하면 diff 계산을 수행하지 않고 `VERSION_413`을 반환합니다.
+
+제한 기준:
+
+- 한 버전당 최대 5,000 lines
+- 한 버전당 최대 200,000 characters
+
+```json
+{
+  "success": false,
+  "code": "VERSION_413",
+  "message": "파일 버전 diff 크기 제한을 초과했습니다.",
+  "data": {
+    "fromVersion": 1,
+    "toVersion": 2,
+    "maxLines": 5000,
+    "maxCharacters": 200000,
+    "fromLineCount": 120,
+    "toLineCount": 6200,
+    "fromCharacterCount": 4000,
+    "toCharacterCount": 180000
+  }
+}
+```
+
+프론트는 이 응답을 받으면 diff UI 대신 "파일이 커서 변경 내용을 표시할 수 없습니다"와 같은 안내를 표시하고, 필요 시 버전 상세 원문 조회로 대체합니다.
+
 ### 동작
 
 - 서버는 두 버전의 `content`를 조회 시점에 비교합니다.
@@ -311,6 +340,7 @@ GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={fromVersion}&to
 - Myers 기반 라인 diff로 중간 삽입/삭제 이후의 동일 라인을 `UNCHANGED`로 정렬합니다.
 - 한 줄 내용 변경은 `REMOVED` 1줄과 `ADDED` 1줄로 응답합니다.
 - `addedLines`와 `removedLines`는 각각 `ADDED`, `REMOVED` 라인 수입니다.
+- 제한을 초과하면 diff 계산 전에 `VERSION_413`을 반환합니다.
 - 비교 대상 버전이 없으면 `VERSION_404`를 반환합니다.
 
 ---

@@ -221,6 +221,33 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   }
 
   @Test
+  void getDiffReturnsLimitResponseWhenVersionContentIsTooLarge() throws Exception {
+    FileFixture fixture =
+        createOwnerFile(
+            "diff limit frontend project", "diff-limit-owner@test.com", "Editor.jsx", null, 0);
+    fileVersionRepository.save(
+        new FileVersion(fixture.file(), fixture.user().getId(), 1, "line 1", "v1"));
+    fileVersionRepository.save(
+        new FileVersion(
+            fixture.file(), fixture.user().getId(), 2, "line\n".repeat(5_000) + "line", "v2"));
+
+    mockMvc
+        .perform(
+            get(
+                    "/api/projects/{projectId}/files/{fileId}/versions/diff?from=1&to=2",
+                    fixture.project().getPublicId(),
+                    fixture.file().getId())
+                .header(AUTHORIZATION, bearerToken(fixture.user().getId())))
+        .andExpect(status().isPayloadTooLarge())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("VERSION_413"))
+        .andExpect(jsonPath("$.data.fromVersion").value(1))
+        .andExpect(jsonPath("$.data.toVersion").value(2))
+        .andExpect(jsonPath("$.data.maxLines").value(5000))
+        .andExpect(jsonPath("$.data.toLineCount").value(5001));
+  }
+
+  @Test
   void getTimelineRejectsNonMember() throws Exception {
     FileFixture fixture =
         createOwnerFile(

@@ -25,6 +25,7 @@ import com.flowdeck.backend.version.dto.FileTimelineResponse;
 import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
+import com.flowdeck.backend.version.dto.FileVersionDiffLimitResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
 import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
@@ -331,6 +332,59 @@ class FileVersionServiceTest {
         .containsExactly(
             tuple("UNCHANGED", "const editor = createEditor()"),
             tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getDiffFailsWhenLineCountExceedsLimit() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "line-limit-diff-owner@test.com", "line 1", "line\n".repeat(5_000) + "line");
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                fileVersionService.getDiff(
+                    fixture.project().getPublicId(),
+                    fixture.owner().getId(),
+                    fixture.file().getId(),
+                    1,
+                    2));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.VERSION_DIFF_TOO_LARGE);
+    assertThat(exception.getData()).isInstanceOf(FileVersionDiffLimitResponse.class);
+
+    FileVersionDiffLimitResponse response = (FileVersionDiffLimitResponse) exception.getData();
+    assertThat(response.maxLines()).isEqualTo(5_000);
+    assertThat(response.toLineCount()).isEqualTo(5_001);
+  }
+
+  @Test
+  void getDiffFailsWhenCharacterCountExceedsLimit() {
+    DiffFixture fixture =
+        createDiffFixture("character-limit-diff-owner@test.com", "line 1", "a".repeat(200_001));
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                fileVersionService.getDiff(
+                    fixture.project().getPublicId(),
+                    fixture.owner().getId(),
+                    fixture.file().getId(),
+                    1,
+                    2));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.VERSION_DIFF_TOO_LARGE);
+    assertThat(exception.getData()).isInstanceOf(FileVersionDiffLimitResponse.class);
+
+    FileVersionDiffLimitResponse response = (FileVersionDiffLimitResponse) exception.getData();
+    assertThat(response.maxCharacters()).isEqualTo(200_000);
+    assertThat(response.toCharacterCount()).isEqualTo(200_001);
   }
 
   @Test
