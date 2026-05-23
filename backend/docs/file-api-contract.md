@@ -28,6 +28,20 @@ BE3 담당 영역인 WebSocket 파일 저장 알림, 채팅 LOG, 실시간 동�
 - `currentVersion`: 사용자가 명시적으로 저장한 버전 번호입니다.
 - `editRevision`: 현재 파일 내용 수정 충돌을 감지하기 위한 번호입니다.
 
+### 버전 슬라이드 UI 호출 흐름
+
+프론트는 버전 슬라이드 또는 타임라인 화면에서 다음 순서로 API를 호출합니다.
+
+1. 타임라인 최초 진입 시 `GET /api/projects/{projectId}/files/{fileId}/versions/timeline?page=0&size=20`을 호출합니다.
+2. `hasNext = true`이면 더보기 또는 스크롤 시 다음 `page`를 요청합니다.
+3. 사용자가 버전 카드를 클릭하면 `GET /api/projects/{projectId}/files/{fileId}/versions/{versionId}`로 해당 버전의 `content`를 조회합니다.
+4. 이전 버전 대비 변경점을 표시할 때 `GET /api/projects/{projectId}/files/{fileId}/versions/diff?from={previousVersion}&to={selectedVersion}`를 호출합니다.
+5. diff 응답의 `UNCHANGED`, `ADDED`, `REMOVED`를 기준으로 라인 배경과 `+`, `-` 표시를 렌더링합니다.
+6. `VERSION_413`을 받으면 diff 영역 대신 제한 초과 안내를 표시하고, 필요 시 버전 상세 원문만 보여줍니다.
+7. `VERSION_404`를 받으면 버전 목록을 새로고침하거나 선택한 버전이 더 이상 유효하지 않음을 안내합니다.
+
+버전 슬라이드 UI는 타임라인 응답만으로 코드 내용을 렌더링하지 않습니다. 코드 내용은 사용자가 선택한 버전에서 lazy loading으로 조회합니다.
+
 ---
 
 ## 1. 파일 상세 조회
