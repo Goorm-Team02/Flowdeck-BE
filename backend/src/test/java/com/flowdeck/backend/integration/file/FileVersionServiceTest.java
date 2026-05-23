@@ -335,6 +335,158 @@ class FileVersionServiceTest {
   }
 
   @Test
+  void getDiffHandlesAddedLineAtBeginning() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "beginning-add-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()",
+            "import './editor.css'\nconst editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(1);
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("ADDED", "import './editor.css'"),
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getDiffHandlesAddedLineAtEnd() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "ending-add-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()",
+            "const editor = createEditor()\neditor.focus()\neditor.dispose()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(1);
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"),
+            tuple("ADDED", "editor.dispose()"));
+  }
+
+  @Test
+  void getDiffAlignsRepeatedLinesWithMinimalChanges() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "repeated-line-diff-owner@test.com",
+            "alpha\nsame\nsame\nomega",
+            "alpha\nsame\ninserted\nsame\nomega");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(1);
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "alpha"),
+            tuple("UNCHANGED", "same"),
+            tuple("ADDED", "inserted"),
+            tuple("UNCHANGED", "same"),
+            tuple("UNCHANGED", "omega"));
+  }
+
+  @Test
+  void getDiffHandlesRemovedLineAtBeginning() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "beginning-remove-diff-owner@test.com",
+            "import './editor.css'\nconst editor = createEditor()\neditor.focus()",
+            "const editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isZero();
+    assertThat(response.removedLines()).isEqualTo(1);
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("REMOVED", "import './editor.css'"),
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getDiffHandlesRemovedLineAtEnd() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "ending-remove-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()\neditor.dispose()",
+            "const editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isZero();
+    assertThat(response.removedLines()).isEqualTo(1);
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"),
+            tuple("REMOVED", "editor.dispose()"));
+  }
+
+  @Test
+  void getDiffHandlesMultipleSeparatedChanges() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "multiple-change-diff-owner@test.com",
+            "import React from 'react'\n"
+                + "const title = 'Editor'\n"
+                + "function Editor() {\n"
+                + "  return <div>{title}</div>\n"
+                + "}\n"
+                + "export default Editor",
+            "import React from 'react'\n"
+                + "import './editor.css'\n"
+                + "const title = 'Editor'\n"
+                + "function Editor() {\n"
+                + "  return <main>{title}</main>\n"
+                + "}\n"
+                + "Editor.displayName = 'Editor'\n"
+                + "export default Editor");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(3);
+    assertThat(response.removedLines()).isEqualTo(1);
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "import React from 'react'"),
+            tuple("ADDED", "import './editor.css'"),
+            tuple("UNCHANGED", "const title = 'Editor'"),
+            tuple("UNCHANGED", "function Editor() {"),
+            tuple("REMOVED", "  return <div>{title}</div>"),
+            tuple("ADDED", "  return <main>{title}</main>"),
+            tuple("UNCHANGED", "}"),
+            tuple("ADDED", "Editor.displayName = 'Editor'"),
+            tuple("UNCHANGED", "export default Editor"));
+  }
+
+  @Test
   void getDiffFailsWhenLineCountExceedsLimit() {
     DiffFixture fixture =
         createDiffFixture(
