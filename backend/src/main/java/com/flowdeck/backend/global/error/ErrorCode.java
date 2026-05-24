@@ -8,6 +8,8 @@ public enum ErrorCode {
   UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_401", "인증이 필요합니다."),
   INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_401_1", "유효하지 않은 토큰입니다."),
   ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_403", "접근 권한이 없습니다."),
+  USER_WITHDRAWAL_BLOCKED(
+      HttpStatus.CONFLICT, "USER_409", "소유권 이전이 필요한 프로젝트가 있어 회원 탈퇴를 진행할 수 없습니다."),
   RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_404", "리소스를 찾을 수 없습니다."),
   FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_404", "파일을 찾을 수 없습니다."),
   FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "FILE_400", "파일 타입이 올바르지 않습니다."),

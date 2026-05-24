@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -34,6 +35,9 @@ public class User extends BaseTimeEntity {
   @Column(nullable = false, length = 50)
   private String name;
 
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
+
   public User(String email, String passwordHash, String name) {
     this.publicId = UUID.randomUUID().toString();
     this.email = email;
@@ -47,5 +51,16 @@ public class User extends BaseTimeEntity {
 
   public void updatePassword(String passwordHash) {
     this.passwordHash = passwordHash;
+  }
+
+  public void withdraw(String maskedEmail, String maskedName, String maskedPasswordHash) {
+    this.email = maskedEmail;
+    this.name = maskedName;
+    this.passwordHash = maskedPasswordHash;
+    this.deletedAt = LocalDateTime.now();
+  }
+
+  public boolean isDeleted() {
+    return deletedAt != null;
   }
 }
