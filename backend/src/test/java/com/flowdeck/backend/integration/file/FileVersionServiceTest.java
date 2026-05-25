@@ -25,6 +25,7 @@ import com.flowdeck.backend.version.dto.FileTimelineResponse;
 import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
+import com.flowdeck.backend.version.dto.FileVersionDiffLimitResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
 import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
@@ -331,6 +332,211 @@ class FileVersionServiceTest {
         .containsExactly(
             tuple("UNCHANGED", "const editor = createEditor()"),
             tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getDiffHandlesAddedLineAtBeginning() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "beginning-add-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()",
+            "import './editor.css'\nconst editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(1);
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("ADDED", "import './editor.css'"),
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getDiffHandlesAddedLineAtEnd() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "ending-add-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()",
+            "const editor = createEditor()\neditor.focus()\neditor.dispose()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(1);
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"),
+            tuple("ADDED", "editor.dispose()"));
+  }
+
+  @Test
+  void getDiffAlignsRepeatedLinesWithMinimalChanges() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "repeated-line-diff-owner@test.com",
+            "alpha\nsame\nsame\nomega",
+            "alpha\nsame\ninserted\nsame\nomega");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(1);
+    assertThat(response.removedLines()).isZero();
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "alpha"),
+            tuple("UNCHANGED", "same"),
+            tuple("ADDED", "inserted"),
+            tuple("UNCHANGED", "same"),
+            tuple("UNCHANGED", "omega"));
+  }
+
+  @Test
+  void getDiffHandlesRemovedLineAtBeginning() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "beginning-remove-diff-owner@test.com",
+            "import './editor.css'\nconst editor = createEditor()\neditor.focus()",
+            "const editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isZero();
+    assertThat(response.removedLines()).isEqualTo(1);
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("REMOVED", "import './editor.css'"),
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"));
+  }
+
+  @Test
+  void getDiffHandlesRemovedLineAtEnd() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "ending-remove-diff-owner@test.com",
+            "const editor = createEditor()\neditor.focus()\neditor.dispose()",
+            "const editor = createEditor()\neditor.focus()");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isZero();
+    assertThat(response.removedLines()).isEqualTo(1);
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "const editor = createEditor()"),
+            tuple("UNCHANGED", "editor.focus()"),
+            tuple("REMOVED", "editor.dispose()"));
+  }
+
+  @Test
+  void getDiffHandlesMultipleSeparatedChanges() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "multiple-change-diff-owner@test.com",
+            "import React from 'react'\n"
+                + "const title = 'Editor'\n"
+                + "function Editor() {\n"
+                + "  return <div>{title}</div>\n"
+                + "}\n"
+                + "export default Editor",
+            "import React from 'react'\n"
+                + "import './editor.css'\n"
+                + "const title = 'Editor'\n"
+                + "function Editor() {\n"
+                + "  return <main>{title}</main>\n"
+                + "}\n"
+                + "Editor.displayName = 'Editor'\n"
+                + "export default Editor");
+
+    FileVersionDiffResponse response =
+        fileVersionService.getDiff(
+            fixture.project().getPublicId(), fixture.owner().getId(), fixture.file().getId(), 1, 2);
+
+    assertThat(response.addedLines()).isEqualTo(3);
+    assertThat(response.removedLines()).isEqualTo(1);
+    assertThat(response.changes())
+        .extracting(DiffLineResponse::type, DiffLineResponse::content)
+        .containsExactly(
+            tuple("UNCHANGED", "import React from 'react'"),
+            tuple("ADDED", "import './editor.css'"),
+            tuple("UNCHANGED", "const title = 'Editor'"),
+            tuple("UNCHANGED", "function Editor() {"),
+            tuple("REMOVED", "  return <div>{title}</div>"),
+            tuple("ADDED", "  return <main>{title}</main>"),
+            tuple("UNCHANGED", "}"),
+            tuple("ADDED", "Editor.displayName = 'Editor'"),
+            tuple("UNCHANGED", "export default Editor"));
+  }
+
+  @Test
+  void getDiffFailsWhenLineCountExceedsLimit() {
+    DiffFixture fixture =
+        createDiffFixture(
+            "line-limit-diff-owner@test.com", "line 1", "line\n".repeat(5_000) + "line");
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                fileVersionService.getDiff(
+                    fixture.project().getPublicId(),
+                    fixture.owner().getId(),
+                    fixture.file().getId(),
+                    1,
+                    2));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.VERSION_DIFF_TOO_LARGE);
+    assertThat(exception.getData()).isInstanceOf(FileVersionDiffLimitResponse.class);
+
+    FileVersionDiffLimitResponse response = (FileVersionDiffLimitResponse) exception.getData();
+    assertThat(response.maxLines()).isEqualTo(5_000);
+    assertThat(response.toLineCount()).isEqualTo(5_001);
+  }
+
+  @Test
+  void getDiffFailsWhenCharacterCountExceedsLimit() {
+    DiffFixture fixture =
+        createDiffFixture("character-limit-diff-owner@test.com", "line 1", "a".repeat(200_001));
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                fileVersionService.getDiff(
+                    fixture.project().getPublicId(),
+                    fixture.owner().getId(),
+                    fixture.file().getId(),
+                    1,
+                    2));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+
+    BusinessException exception = (BusinessException) throwable;
+    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.VERSION_DIFF_TOO_LARGE);
+    assertThat(exception.getData()).isInstanceOf(FileVersionDiffLimitResponse.class);
+
+    FileVersionDiffLimitResponse response = (FileVersionDiffLimitResponse) exception.getData();
+    assertThat(response.maxCharacters()).isEqualTo(200_000);
+    assertThat(response.toCharacterCount()).isEqualTo(200_001);
   }
 
   @Test
