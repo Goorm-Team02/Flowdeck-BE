@@ -19,6 +19,7 @@ public enum ErrorCode {
   FILE_EDIT_CONFLICT(HttpStatus.CONFLICT, "FILE_409", "파일이 다른 사용자에 의해 수정되었습니다."),
   FILE_NAME_DUPLICATED(HttpStatus.CONFLICT, "FILE_409_1", "같은 위치에 동일한 이름이 존재합니다."),
   VERSION_NOT_FOUND(HttpStatus.NOT_FOUND, "VERSION_404", "파일 버전을 찾을 수 없습니다."),
+  VERSION_DIFF_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "VERSION_413", "파일 버전 diff 크기 제한을 초과했습니다."),
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500", "서버 내부 오류가 발생했습니다.");
 
   private final HttpStatus httpStatus;

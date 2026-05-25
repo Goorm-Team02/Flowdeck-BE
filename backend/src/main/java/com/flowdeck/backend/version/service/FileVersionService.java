@@ -22,6 +22,7 @@ import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
 import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
+import com.flowdeck.backend.version.dto.FileVersionDiffLimitResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
 import com.flowdeck.backend.version.dto.FileVersionListResponse;
 import com.flowdeck.backend.version.dto.FileVersionResponse;
@@ -49,6 +50,8 @@ public class FileVersionService {
   private static final int DEFAULT_TIMELINE_PAGE = 0;
   private static final int DEFAULT_TIMELINE_SIZE = 20;
   private static final int MAX_TIMELINE_SIZE = 100;
+  private static final int MAX_DIFF_LINES = 5_000;
+  private static final int MAX_DIFF_CHARACTERS = 200_000;
 
   private final ProjectRepository projectRepository;
   private final ProjectFileRepository projectFileRepository;
@@ -204,6 +207,7 @@ public class FileVersionService {
             .findByFileAndVersionNumber(file, toVersion)
             .orElseThrow(() -> new BusinessException(ErrorCode.VERSION_NOT_FOUND));
 
+    validateDiffSize(from, to);
     return createDiffResponse(from, to);
   }
 
@@ -372,6 +376,28 @@ public class FileVersionService {
 
     return new FileVersionDiffResponse(
         from.getVersionNumber(), to.getVersionNumber(), addedLines, removedLines, changes);
+  }
+
+  private void validateDiffSize(FileVersion from, FileVersion to) {
+    if (exceedsDiffLimit(from.getContent()) || exceedsDiffLimit(to.getContent())) {
+      throw new BusinessException(
+          ErrorCode.VERSION_DIFF_TOO_LARGE,
+          FileVersionDiffLimitResponse.of(
+              from.getVersionNumber(),
+              to.getVersionNumber(),
+              MAX_DIFF_LINES,
+              MAX_DIFF_CHARACTERS,
+              from.getContent(),
+              to.getContent()));
+    }
+  }
+
+  private boolean exceedsDiffLimit(String content) {
+    return content.length() > MAX_DIFF_CHARACTERS || countLines(content) > MAX_DIFF_LINES;
+  }
+
+  private int countLines(String content) {
+    return content.split("\\R", -1).length;
   }
 
   private List<DiffOperation> preferRemovedBeforeAdded(List<DiffOperation> operations) {

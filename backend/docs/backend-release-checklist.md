@@ -162,6 +162,8 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] 명시적 버전 저장 성공 응답 프론트 필드 검증
 - [x] 버전 복원 성공 응답 프론트 필드 검증
 - [x] 주요 파일 API 에러 코드 HTTP 응답 검증
+- [x] 버전 타임라인 pagination 응답 검증
+- [x] 버전 diff 크기 제한 초과 시 `VERSION_413` 응답 검증
 
 ---
 
@@ -230,6 +232,12 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
   - 버전 저장 성공 후 `currentVersion`이 증가하는지 확인
   - 버전 저장 성공 후 `editRevision`이 증가하지 않는지 확인
 - [ ] 버전 목록 조회
+- [ ] 버전 타임라인 조회
+  - `page`, `size`, `totalVersions`, `hasNext`가 의도대로 표시되는지 확인
+  - 더보기 또는 스크롤 시 다음 `page`를 요청하는지 확인
+- [ ] 버전 diff 조회
+  - 선택 버전과 이전 버전의 `ADDED`, `REMOVED`, `UNCHANGED` 라인이 구분되는지 확인
+  - 제한 초과 시 `VERSION_413` 안내로 전환되는지 확인
 - [ ] 버전 복원
   - 복원 성공 후 `currentVersion`과 `editRevision`이 모두 갱신되는지 확인
 - [ ] 저장 충돌 409 확인
@@ -262,6 +270,7 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] `FILE_400_3` 파일 크기 초과 안내
 - [ ] `FILE_404` 파일 없음 안내 및 파일 트리 새로고침
 - [ ] `VERSION_404` 버전 없음 안내 및 버전 목록 새로고침
+- [ ] `VERSION_413` diff 크기 초과 안내 및 버전 상세 원문 fallback
 - [ ] `COMMON_400` 필수 요청값 누락 안내
 - [ ] `AUTH_401` 로그인 또는 토큰 재발급 흐름
 - [ ] `AUTH_403` 권한 부족 안내
@@ -308,6 +317,8 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 운영 profile 분리 강화
 - [ ] Swagger 운영 차단 정책 확정
 - [ ] 파일 크기 제한값 설정 분리
+- [ ] 버전 diff 제한값 설정 분리
+- [ ] 대용량 파일 저장 요구 증가 시 S3/Object Storage 전환 검토
 - [x] Public 프로젝트 공개 범위 최종 확정
 - [x] WebSocket presence Redis TTL 정책 확정
 - [x] 파일 편집은 강제 lock 대신 Editing Presence 방향으로 결정
