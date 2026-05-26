@@ -16,6 +16,8 @@ import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
+import com.flowdeck.backend.presence.domain.ProjectPresenceSession;
+import com.flowdeck.backend.presence.store.ProjectPresenceStore;
 import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.domain.ProjectVisibility;
 import com.flowdeck.backend.project.repository.ProjectRepository;
@@ -23,14 +25,23 @@ import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.testsupport.AuthenticatedWebIntegrationTest;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 @AuthenticatedWebIntegrationTest
+@Import(UserWithdrawalControllerTest.FakePresenceStoreConfig.class)
 class UserWithdrawalControllerTest {
 
   private final MockMvc mockMvc;
@@ -40,6 +51,7 @@ class UserWithdrawalControllerTest {
   private final UserRepository userRepository;
   private final ProjectRepository projectRepository;
   private final ProjectMemberRepository projectMemberRepository;
+  private final ProjectPresenceStore projectPresenceStore;
 
   @Autowired
   UserWithdrawalControllerTest(
@@ -49,7 +61,8 @@ class UserWithdrawalControllerTest {
       AuthTokenService authTokenService,
       UserRepository userRepository,
       ProjectRepository projectRepository,
-      ProjectMemberRepository projectMemberRepository) {
+      ProjectMemberRepository projectMemberRepository,
+      ProjectPresenceStore projectPresenceStore) {
     this.mockMvc = mockMvc;
     this.jwtTokenProvider = jwtTokenProvider;
     this.passwordEncoder = passwordEncoder;
@@ -57,10 +70,12 @@ class UserWithdrawalControllerTest {
     this.userRepository = userRepository;
     this.projectRepository = projectRepository;
     this.projectMemberRepository = projectMemberRepository;
+    this.projectPresenceStore = projectPresenceStore;
   }
 
   @BeforeEach
   void setUp() {
+    ((FakeProjectPresenceStore) projectPresenceStore).clear();
     projectMemberRepository.deleteAll();
     projectRepository.deleteAll();
     userRepository.deleteAll();
@@ -78,6 +93,9 @@ class UserWithdrawalControllerTest {
         projectRepository.save(new Project("project", "description", ProjectVisibility.PRIVATE));
     projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
     projectMemberRepository.save(new ProjectMember(project, user, ProjectRole.EDITOR));
+    projectPresenceStore.touchSession(
+        "withdraw-session-1",
+        new ProjectPresenceSession(project.getPublicId(), user.getId(), Instant.now()));
     String accessToken = createAccessToken(user);
 
     mockMvc
@@ -95,6 +113,9 @@ class UserWithdrawalControllerTest {
     verify(authTokenService).deleteRefreshToken(user.getId());
     verify(authTokenService).blacklistAccessToken(eq(accessToken), any(Duration.class));
     verify(authTokenService).forceLogout(eq(user.getId()), any(Duration.class));
+    assertThat(projectPresenceStore.findSession("withdraw-session-1")).isEmpty();
+    assertThat(projectPresenceStore.findActiveSessions(project.getPublicId(), Instant.now()))
+        .noneMatch(session -> user.getId().equals(session.userId()));
   }
 
   @Test
@@ -173,5 +194,51 @@ class UserWithdrawalControllerTest {
         {"email":"%s","password":"%s","name":"%s"}
         """
         .formatted(email, password, name);
+  }
+
+  @TestConfiguration
+  static class FakePresenceStoreConfig {
+
+    @Bean
+    @Primary
+    ProjectPresenceStore projectPresenceStore() {
+      return new FakeProjectPresenceStore();
+    }
+  }
+
+  private static final class FakeProjectPresenceStore implements ProjectPresenceStore {
+
+    private final Map<String, ProjectPresenceSession> sessions = new HashMap<>();
+
+    @Override
+    public void touchSession(String sessionId, ProjectPresenceSession session) {
+      sessions.put(sessionId, session);
+    }
+
+    @Override
+    public Optional<ProjectPresenceSession> findSession(String sessionId) {
+      return Optional.ofNullable(sessions.get(sessionId));
+    }
+
+    @Override
+    public void removeSession(String sessionId) {
+      sessions.remove(sessionId);
+    }
+
+    @Override
+    public void removeSessionsByUserId(Long userId) {
+      sessions.entrySet().removeIf(entry -> userId.equals(entry.getValue().userId()));
+    }
+
+    @Override
+    public List<ProjectPresenceSession> findActiveSessions(String projectId, Instant now) {
+      return sessions.values().stream()
+          .filter(session -> projectId.equals(session.projectId()))
+          .toList();
+    }
+
+    private void clear() {
+      sessions.clear();
+    }
   }
 }

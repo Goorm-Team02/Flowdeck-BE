@@ -126,6 +126,11 @@ class ProjectPresenceServiceTest {
     }
 
     @Override
+    public void removeSessionsByUserId(Long userId) {
+      sessions.entrySet().removeIf(entry -> userId.equals(entry.getValue().userId()));
+    }
+
+    @Override
     public List<ProjectPresenceSession> findActiveSessions(String projectId, Instant now) {
       return sessions.values().stream()
           .filter(session -> projectId.equals(session.projectId()))

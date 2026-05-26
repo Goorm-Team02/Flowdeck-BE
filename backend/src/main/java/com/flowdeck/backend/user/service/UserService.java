@@ -8,6 +8,7 @@ import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
+import com.flowdeck.backend.presence.store.ProjectPresenceStore;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.dto.UserResponse;
 import com.flowdeck.backend.user.dto.UserUpdateRequest;
@@ -36,6 +37,7 @@ public class UserService {
   private final JwtTokenProvider jwtTokenProvider;
   private final AuthTokenService authTokenService;
   private final AfterCommitExecutor afterCommitExecutor;
+  private final ProjectPresenceStore projectPresenceStore;
 
   public UserService(
       UserRepository userRepository,
@@ -43,13 +45,15 @@ public class UserService {
       PasswordEncoder passwordEncoder,
       JwtTokenProvider jwtTokenProvider,
       AuthTokenService authTokenService,
-      AfterCommitExecutor afterCommitExecutor) {
+      AfterCommitExecutor afterCommitExecutor,
+      ProjectPresenceStore projectPresenceStore) {
     this.userRepository = userRepository;
     this.projectMemberRepository = projectMemberRepository;
     this.passwordEncoder = passwordEncoder;
     this.jwtTokenProvider = jwtTokenProvider;
     this.authTokenService = authTokenService;
     this.afterCommitExecutor = afterCommitExecutor;
+    this.projectPresenceStore = projectPresenceStore;
   }
 
   @Transactional(readOnly = true)
@@ -85,6 +89,7 @@ public class UserService {
           authTokenService.deleteRefreshToken(userId);
           authTokenService.blacklistAccessToken(accessToken, remainingDuration);
           authTokenService.forceLogout(userId, FORCE_LOGOUT_TTL);
+          projectPresenceStore.removeSessionsByUserId(userId);
         });
   }
 

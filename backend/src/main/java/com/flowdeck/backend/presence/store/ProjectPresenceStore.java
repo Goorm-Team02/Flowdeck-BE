@@ -13,5 +13,7 @@ public interface ProjectPresenceStore {
 
   void removeSession(String sessionId);
 
+  void removeSessionsByUserId(Long userId);
+
   List<ProjectPresenceSession> findActiveSessions(String projectId, Instant now);
 }
