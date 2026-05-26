@@ -104,6 +104,9 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 로그인 시 refresh token 원문이 아닌 SHA-256 해시 저장 확인
 - [ ] 로그아웃 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
 - [ ] 로그아웃 시 refresh token 삭제 확인
+- [ ] 회원 탈퇴 시 refresh token 삭제 확인
+- [ ] 회원 탈퇴 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
+- [ ] 회원 탈퇴 시 `auth:force-logout:{userId}` 저장 확인
 - [ ] 멤버 권한 변경/탈퇴 시 `auth:force-logout:{userId}` 저장 확인
 - [ ] TTL이 의도한 시간으로 설정되는지 확인
 - [x] Redis 토큰 원문 저장 제거 및 해시 저장 전환 반영
@@ -195,6 +198,10 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] refresh token 재발급
 - [ ] 로그아웃
 - [ ] 로그아웃된 access token 차단
+- [ ] 회원 탈퇴
+- [ ] 마지막 OWNER 프로젝트 보유 시 회원 탈퇴 차단
+- [ ] 회원 탈퇴 후 동일 이메일 재가입
+- [ ] 회원 탈퇴 후 로그인/refresh token 재발급 차단
 
 ### 프로젝트
 
@@ -315,6 +322,8 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] Public 프로젝트 공개 범위 최종 확정
 - [x] WebSocket presence Redis TTL 정책 확정
 - [x] 파일 편집은 강제 lock 대신 Editing Presence 방향으로 결정
+- [ ] 회원 탈퇴 사용자의 WebSocket presence 즉시 제거 정책 구현
+  - 1차 회원 탈퇴에서는 TTL 기반 자연 만료를 사용하고, `presence:user:{userId}` 인덱스 기반 즉시 제거는 2차 작업으로 분리
 - [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
 - [x] 파일 이벤트 WebSocket 발행 구현
 - [ ] Editing Presence 구현

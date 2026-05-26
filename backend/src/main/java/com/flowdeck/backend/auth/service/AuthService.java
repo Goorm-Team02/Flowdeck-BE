@@ -56,7 +56,7 @@ public class AuthService {
   public LoginResponse login(LoginRequest request) {
     User user =
         userRepository
-            .findByEmail(request.getEmail())
+            .findByEmailAndDeletedAtIsNull(request.getEmail())
             .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
     if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -88,6 +88,7 @@ public class AuthService {
     User user =
         userRepository
             .findById(userId)
+            .filter(foundUser -> !foundUser.isDeleted())
             .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
     String accessToken =

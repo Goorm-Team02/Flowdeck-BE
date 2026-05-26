@@ -388,3 +388,43 @@ H2 PostgreSQL Mode는 Docker 없이 실행 가능하고,
 
 PostgreSQL partial index, 복잡한 SQL, 성능 검증이 필요해지면
 Testcontainers 기반 PostgreSQL 테스트로 전환해야 합니다.
+
+---
+
+## 11. 회원 탈퇴 정책
+
+### 결정
+
+회원 탈퇴는 사용자 row를 물리 삭제하지 않고 `deletedAt` 기반 soft delete로 처리합니다.
+
+탈퇴 시 이메일은 `deleted+{userId}+{yyyyMMddHHmmss}@flowdeck.local` 형식으로 마스킹하고,
+이름은 `탈퇴한 사용자`로 변경합니다.
+
+비밀번호는 랜덤 UUID를 인코딩한 값으로 교체해 기존 비밀번호로 다시 인증할 수 없게 합니다.
+
+### 마지막 OWNER 처리
+
+사용자가 마지막 OWNER로 남아 있는 프로젝트가 하나라도 있으면 탈퇴를 거부합니다.
+
+사용자는 먼저 프로젝트 소유권을 다른 사용자에게 이전하거나 프로젝트를 삭제해야 합니다.
+
+### 인증/토큰 처리
+
+회원 탈퇴 후에는 로그인과 refresh token 재발급을 차단합니다.
+
+탈퇴 트랜잭션이 커밋된 뒤 `AfterCommitExecutor`를 통해 Redis 토큰 상태를 정리합니다.
+
+- refresh token 삭제
+- 현재 access token blacklist 등록
+- force logout 플래그 설정
+
+Redis 정리 실패가 DB 탈퇴 트랜잭션을 롤백하지 않도록 Redis 작업은 커밋 후 실행합니다.
+
+### Presence 처리
+
+1차 회원 탈퇴 범위에서는 WebSocket presence 세션을 즉시 제거하지 않습니다.
+
+현재 presence TTL은 30초이므로 탈퇴 사용자의 세션은 자연 만료됩니다.
+
+사용자별 presence 즉시 제거가 필요해지면 `presence:user:{userId}` 인덱스와
+`removeSessionsByUserId(userId)` 흐름을 2차 작업에서 추가합니다.
