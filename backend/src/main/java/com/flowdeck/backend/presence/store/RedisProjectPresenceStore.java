@@ -14,8 +14,10 @@ import org.springframework.stereotype.Component;
 public class RedisProjectPresenceStore implements ProjectPresenceStore {
 
   private static final String PROJECT_PRESENCE_KEY_PREFIX = "presence:project:";
+  private static final String USER_PRESENCE_KEY_PREFIX = "presence:user:";
   private static final String SESSION_KEY_PREFIX = "ws:session:";
   private static final Duration SESSION_TTL = Duration.ofSeconds(30);
+  private static final Duration USER_PRESENCE_TTL = Duration.ofSeconds(60);
   private static final String SESSION_FIELD_DELIMITER = "|";
 
   private final StringRedisTemplate stringRedisTemplate;
@@ -27,12 +29,19 @@ public class RedisProjectPresenceStore implements ProjectPresenceStore {
   @Override
   public void touchSession(String sessionId, ProjectPresenceSession session) {
     findSession(sessionId)
-        .filter(existingSession -> !session.projectId().equals(existingSession.projectId()))
         .ifPresent(
-            existingSession ->
+            existingSession -> {
+              if (!session.projectId().equals(existingSession.projectId())) {
                 stringRedisTemplate
                     .opsForZSet()
-                    .remove(projectPresenceKey(existingSession.projectId()), sessionId));
+                    .remove(projectPresenceKey(existingSession.projectId()), sessionId);
+              }
+              if (!session.userId().equals(existingSession.userId())) {
+                stringRedisTemplate
+                    .opsForSet()
+                    .remove(userPresenceKey(existingSession.userId()), sessionId);
+              }
+            });
 
     stringRedisTemplate
         .opsForValue()
@@ -43,6 +52,8 @@ public class RedisProjectPresenceStore implements ProjectPresenceStore {
             projectPresenceKey(session.projectId()),
             sessionId,
             session.lastSeenAt().toEpochMilli());
+    stringRedisTemplate.opsForSet().add(userPresenceKey(session.userId()), sessionId);
+    stringRedisTemplate.expire(userPresenceKey(session.userId()), USER_PRESENCE_TTL);
     pruneExpiredSessions(session.projectId(), session.lastSeenAt());
   }
 
@@ -71,8 +82,33 @@ public class RedisProjectPresenceStore implements ProjectPresenceStore {
               stringRedisTemplate
                   .opsForZSet()
                   .remove(projectPresenceKey(session.projectId()), sessionId);
+              stringRedisTemplate.opsForSet().remove(userPresenceKey(session.userId()), sessionId);
               stringRedisTemplate.delete(sessionKey(sessionId));
             });
+  }
+
+  @Override
+  public void removeSessionsByUserId(Long userId) {
+    String userPresenceKey = userPresenceKey(userId);
+    Set<String> sessionIds = stringRedisTemplate.opsForSet().members(userPresenceKey);
+    if (sessionIds == null || sessionIds.isEmpty()) {
+      stringRedisTemplate.delete(userPresenceKey);
+      return;
+    }
+
+    for (String sessionId : sessionIds) {
+      findSession(sessionId)
+          .filter(session -> userId.equals(session.userId()))
+          .ifPresent(
+              session -> {
+                stringRedisTemplate
+                    .opsForZSet()
+                    .remove(projectPresenceKey(session.projectId()), sessionId);
+                stringRedisTemplate.delete(sessionKey(sessionId));
+              });
+    }
+
+    stringRedisTemplate.delete(userPresenceKey);
   }
 
   @Override
@@ -130,6 +166,10 @@ public class RedisProjectPresenceStore implements ProjectPresenceStore {
 
   private String projectPresenceKey(String projectId) {
     return PROJECT_PRESENCE_KEY_PREFIX + projectId;
+  }
+
+  private String userPresenceKey(Long userId) {
+    return USER_PRESENCE_KEY_PREFIX + userId;
   }
 
   private String sessionKey(String sessionId) {

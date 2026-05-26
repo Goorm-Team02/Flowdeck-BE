@@ -422,9 +422,15 @@ Redis 정리 실패가 DB 탈퇴 트랜잭션을 롤백하지 않도록 Redis �
 
 ### Presence 처리
 
-1차 회원 탈퇴 범위에서는 WebSocket presence 세션을 즉시 제거하지 않습니다.
+회원 탈퇴 시 WebSocket presence 세션은 DB 트랜잭션 커밋 후 제거합니다.
 
-현재 presence TTL은 30초이므로 탈퇴 사용자의 세션은 자연 만료됩니다.
+Redis 정리 실패가 DB 탈퇴 트랜잭션을 롤백하지 않도록
+토큰 정리와 동일하게 `AfterCommitExecutor`에서 처리합니다.
 
-사용자별 presence 즉시 제거가 필요해지면 `presence:user:{userId}` 인덱스와
-`removeSessionsByUserId(userId)` 흐름을 2차 작업에서 추가합니다.
+`presence:user:{userId}`는 사용자별 WebSocket sessionId를 찾기 위한
+보조 인덱스입니다. 원본 세션 데이터는 `ws:session:{sessionId}`에 유지하며,
+탈퇴 시 user 인덱스를 기준으로 해당 사용자의 session key와 project presence index를 제거합니다.
+
+`presence:user:{userId}`는 TTL 60초를 사용합니다.
+이는 `ws:session:{sessionId}` TTL 30초보다 길게 두어
+정상 heartbeat 중에는 사용자별 정리 인덱스가 먼저 만료되지 않도록 하기 위한 기준입니다.
