@@ -17,14 +17,50 @@
 
 ## 개발용 데이터베이스
 
-- 백엔드 로컬 개발 DB : `PostgreSQL`
+- 백엔드 로컬 개발 인프라 : `PostgreSQL`, `Redis`
 - 기본 로컬 연결 정보:
   - URL: `jdbc:postgresql://localhost:5432/flowdeck`
   - username: `flowdeck`
   - password: `flowdeck`
 - 필요하면 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JPA_DDL_AUTO`, `JPA_SHOW_SQL`로 값을 덮어쓰기 가능
-- 로컬 DB는 `docker compose -f docker-compose.dev.yaml up -d`로 실행
-- 예시 환경 변수 : `.env.example`
+- 개발 Docker 환경은 `docker compose --env-file .env -f docker-compose.dev.yaml up -d --build`로 실행
+- 개발 예시 환경 변수 : `.env.dev.example`
+
+## AWS Docker 배포
+
+- 개발 Docker 이미지는 [`backend/Dockerfile.dev`](backend/Dockerfile.dev) 로 빌드합니다.
+- 운영 Docker 이미지는 [`backend/Dockerfile.prod`](backend/Dockerfile.prod) 로 빌드합니다.
+- 운영 compose는 [`docker-compose.prod.yaml`](docker-compose.prod.yaml) 입니다.
+- 운영 서버에는 `.env.prod.example` 을 복사한 `.env.prod` 를 만들고 실제 비밀값을 채웁니다.
+- `.env`, `.env.prod` 는 Git에 커밋하지 않습니다.
+
+개발 서버 예시:
+
+```bash
+cd /opt/flowdeck/backend-dev/app
+git checkout develop
+git pull origin develop
+cp .env.dev.example .env
+docker compose --env-file .env -f docker-compose.dev.yaml up -d --build
+```
+
+운영 서버 예시:
+
+```bash
+cd /opt/flowdeck/backend-prod/app
+git checkout main
+git pull origin main
+cp .env.prod.example .env.prod
+docker compose --env-file .env.prod -f docker-compose.prod.yaml up -d --build
+```
+
+운영 권장값:
+
+- `SPRING_PROFILES_ACTIVE=prod`
+- `JPA_DDL_AUTO=validate`
+- `JPA_SHOW_SQL=false`
+- `JWT_SECRET` 은 32바이트 이상의 랜덤 문자열 사용
+- `CORS_ALLOWED_ORIGINS` 는 실제 프론트엔드 도메인만 허용
 
 ## 정적 Swagger 문서 배포
 
