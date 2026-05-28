@@ -1,0 +1,13 @@
+.gradle/
+build/
+out/
+target/
+
+.git/
+.gitignore
+
+*.log
+*.tmp
+*.temp
+
+src/test/
