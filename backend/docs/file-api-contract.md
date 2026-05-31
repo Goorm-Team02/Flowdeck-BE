@@ -2,9 +2,9 @@
 
 이 문서는 FlowDeck MVP 기준 파일 상세 조회, 현재 내용 저장, 명시적 버전 저장, 버전 복원 API 계약을 정리합니다.
 
-BE3 담당 영역인 WebSocket 파일 저장 알림, 채팅 LOG, 실시간 동기화는 이 문서 범위에서 제외합니다.
+WebSocket 파일 이벤트, 프로젝트 채팅, 프로젝트 presence는 이 문서 범위에서 제외합니다.
 
-파일 WebSocket 이벤트와 Editing Presence 계약은 `docs/realtime-file-collaboration-contract.md`에서 별도로 관리합니다.
+파일 WebSocket 이벤트와 프로젝트 presence 계약은 `backend/docs/realtime-file-collaboration-contract.md`에서 별도로 관리합니다.
 
 ---
 
@@ -443,7 +443,8 @@ DELETE /api/projects/{projectId}/files/{fileId}?expectedRevision=5
 - `expectedRevision`이 현재 `editRevision`과 같으면 삭제합니다.
 - `expectedRevision`이 현재 `editRevision`과 다르면 `FILE_409` 충돌 응답을 반환합니다.
 - MVP 기준으로 폴더 삭제 시 하위 파일 전체 revision은 검사하지 않습니다.
-- 하위 파일 편집 중 삭제 위험은 후속 WebSocket 알림과 Editing Presence로 보완합니다.
+- 하위 파일 편집 중 삭제 위험은 WebSocket 파일 이벤트와 프로젝트 presence로 일부 보완합니다.
+- 파일 단위 편집 presence가 필요하면 별도 계약으로 추가합니다.
 
 ---
 
@@ -457,15 +458,16 @@ MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않
 
 따라서 프론트는 이름변경/이동 성공 응답을 기준으로 현재 파일 트리를 갱신합니다.
 
-다른 사용자가 보고 있는 파일 트리 갱신은 후속 WebSocket 이벤트로 보완합니다.
+다른 사용자가 보고 있는 파일 트리 갱신은 WebSocket 파일 이벤트로 보완합니다.
 
-후속 후보 이벤트:
+현재 파일 이벤트:
 
-- `file.renamed`
-- `file.moved`
-- `file.deleted`
-- `file.restored`
-- `file.saved`
+- `FILE_CREATED`
+- `FILE_SAVED`
+- `FILE_RESTORED`
+- `FILE_DELETED`
+- `FILE_RENAMED`
+- `FILE_MOVED`
 
 파일 트리 변경 충돌을 더 엄격하게 다룰 필요가 생기면
 `metadataRevision` 또는 `treeRevision` 도입을 검토합니다.

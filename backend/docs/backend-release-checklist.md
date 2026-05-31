@@ -37,6 +37,12 @@ FlowDeck 백엔드 배포 전 확인해야 할 운영 체크리스트입니다.
 - [ ] 운영 프론트 도메인 반영
 - [ ] localhost origin이 운영에 남아있지 않은지 확인
 
+### Port
+
+- [ ] 개발 Docker 호스트 포트는 기본 `8081` 사용 (`BACKEND_PORT=8081`, 컨테이너 내부 `8080`)
+- [ ] 운영 Docker 호스트 포트는 기본 `8080` 사용 (`BACKEND_PORT=8080`, 컨테이너 내부 `8080`)
+- [ ] 같은 서버에서 개발/운영을 함께 띄울 경우 호스트 포트 충돌이 없는지 확인
+
 ---
 
 ## 2. JPA ddl-auto 설정
@@ -63,7 +69,7 @@ FlowDeck 백엔드 배포 전 확인해야 할 운영 체크리스트입니다.
 
 관련 문서:
 
-- `docs/db-migration-plan.md`
+- `backend/docs/db-migration-plan.md`
 
 현재 운영 배포 전 확인해야 할 주요 컬럼:
 
@@ -141,7 +147,7 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 
 관련 문서:
 
-- `docs/file-api-contract.md`
+- `backend/docs/file-api-contract.md`
 
 체크:
 
@@ -286,12 +292,13 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 
 ### 실시간 파일 협업 준비
 
-- [ ] `file.saved` 이벤트 payload 확정
-- [ ] `file.restored` 이벤트 payload 확정
-- [ ] `file.deleted` 이벤트 payload 확정
-- [ ] `file.renamed` 이벤트 payload 확정
-- [ ] `file.moved` 이벤트 payload 확정
-- [ ] Editing Presence 상단 표시 UX 확정
+- [x] `FILE_SAVED` 이벤트 payload 구현
+- [x] `FILE_RESTORED` 이벤트 payload 구현
+- [x] `FILE_DELETED` 이벤트 payload 구현
+- [x] `FILE_RENAMED` 이벤트 payload 구현
+- [x] `FILE_MOVED` 이벤트 payload 구현
+- [x] 프로젝트 presence payload 구현
+- [ ] 파일 단위 presence 도입 여부 결정
 - [x] Redis presence TTL / heartbeat 정책 확정
   - 프로젝트 접속 presence TTL 30초, 클라이언트 heartbeat 10초 기준
 
@@ -322,10 +329,11 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 대용량 파일 저장 요구 증가 시 S3/Object Storage 전환 검토
 - [x] Public 프로젝트 공개 범위 최종 확정
 - [x] WebSocket presence Redis TTL 정책 확정
-- [x] 파일 편집은 강제 lock 대신 Editing Presence 방향으로 결정
+- [x] 파일 편집은 강제 lock 대신 optimistic locking과 WebSocket 알림 방향으로 결정
 - [x] 회원 탈퇴 사용자의 WebSocket presence 즉시 제거 정책 구현
   - `presence:user:{userId}` 보조 인덱스로 탈퇴 사용자 세션을 커밋 후 제거
 - [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
 - [x] 파일 이벤트 WebSocket 발행 구현
-- [ ] Editing Presence 구현
+- [x] 프로젝트 presence 구현
+- [ ] 파일 단위 presence 구현 여부 결정
 - [ ] `metadataRevision` 또는 `treeRevision` 도입 여부 검토

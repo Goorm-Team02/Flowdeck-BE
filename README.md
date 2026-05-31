@@ -25,6 +25,7 @@
 - 필요하면 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JPA_DDL_AUTO`, `JPA_SHOW_SQL`로 값을 덮어쓰기 가능
 - 개발 Docker 환경은 `docker compose --env-file .env -f docker-compose.dev.yaml up -d --build`로 실행
 - 개발 예시 환경 변수 : `.env.dev.example`
+- 개발 Docker 기본 포트는 호스트 `8081`입니다. 컨테이너 내부 Spring Boot 포트 `8080`에 매핑됩니다.
 
 ## AWS Docker 배포
 
@@ -33,6 +34,7 @@
 - 운영 compose는 [`docker-compose.prod.yaml`](docker-compose.prod.yaml) 입니다.
 - 운영 서버에는 `.env.prod.example` 을 복사한 `.env.prod` 를 만들고 실제 비밀값을 채웁니다.
 - `.env`, `.env.prod` 는 Git에 커밋하지 않습니다.
+- 운영 Docker 기본 포트는 호스트 `8080`입니다. 필요하면 `BACKEND_PORT`로 호스트 포트만 변경할 수 있습니다.
 - 자동 배포는 [`Deploy AWS Backend`](.github/workflows/deploy-aws.yml) 워크플로에서 처리합니다.
   - `develop` push/merge: `backend-dev` 서버에 배포
   - `main` push/merge: `backend-prod` 서버에 배포

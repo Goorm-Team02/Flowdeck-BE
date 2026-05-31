@@ -284,8 +284,9 @@ Redis는 빠른 조회와 TTL 기반 임시 데이터에 적합하지만,
 - `auth:refresh:{userId}`: Refresh Token 해시 저장
 - `auth:blacklist:{sha256(accessToken)}`: 로그아웃된 Access Token 차단
 - `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 강제 로그아웃
-- `presence:project:{projectId}`: 프로젝트 접속자 상태 후보
-- `ws:session:{sessionId}`: WebSocket 세션 보조 후보
+- `presence:project:{projectId}`: 프로젝트 접속자 상태
+- `ws:session:{sessionId}`: WebSocket 세션 보조
+- `presence:user:{userId}`: 사용자별 WebSocket sessionId 보조 인덱스
 - `run:result:{runId}`: 코드 실행 결과 임시 저장 후보
 
 ### 영향
