@@ -15,15 +15,36 @@
 com.flowdeck.backend
 ├── global
 │   ├── config
+│   ├── entity
 │   ├── error
-│   └── security
+│   ├── response
+│   ├── security
+│   └── transaction
 └── {feature}
     ├── controller
     ├── service
     ├── dto
     ├── domain
-    └── repository
+    ├── repository
+    ├── realtime
+    └── store
 ```
+
+현재 기능 패키지는 다음 기준으로 나눕니다.
+
+- `auth`: 회원가입, 로그인, refresh, logout 같은 인증 흐름
+- `user`: 내 정보 조회/수정, 회원 탈퇴
+- `project`: 프로젝트 생성, 조회, 수정, 삭제
+- `member`: 프로젝트 멤버와 역할 관리
+- `permission`: 프로젝트 접근/권한 판정 공통 로직
+- `file`: 파일/폴더 트리, 검색, 이름변경, 이동, 삭제와 파일 WebSocket 이벤트
+- `version`: 파일 내용 저장, 명시적 버전 저장, 복원, 타임라인, diff
+- `projectmessage`: 프로젝트 채팅/LOG 메시지 REST 및 STOMP 처리
+- `presence`: 프로젝트 접속 상태 REST, STOMP heartbeat, Redis presence 저장소
+
+`realtime` 패키지는 STOMP destination, broadcaster 등 WebSocket 발행 책임을 둡니다.
+`store` 패키지는 Redis처럼 repository와 성격이 다른 임시 상태 저장소 어댑터에 사용합니다.
+필요하지 않은 하위 패키지는 만들지 않습니다.
 
 테스트 코드는 목적에 따라 `com.flowdeck.backend.{category}` 아래에 배치합니다.
 
@@ -42,6 +63,8 @@ com.flowdeck.backend
 - `service`: 비즈니스 로직, 트랜잭션 경계 설정, repository 및 외부 클라이언트 호출 조합
 - `repository`: 영속성 처리만 담당, HTTP 관련 로직 금지
 - `domain`: 엔티티 상태와 도메인 동작 표현
+- `realtime`: WebSocket destination 구성과 이벤트 발행
+- `store`: Redis 등 임시 상태 저장소 접근
 - `global`: 공통 설정, 보안, 예외 처리 같은 횡단 관심사 담당
 
 ## 4. 처리 규칙

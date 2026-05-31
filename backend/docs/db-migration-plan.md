@@ -91,7 +91,45 @@ ALTER COLUMN edit_revision DROP DEFAULT;
 
 ---
 
-## 3. 파일 저장 제한 정책
+## 3. 현재 운영 스키마 확인 대상
+
+현재 코드 구조 기준으로 운영 DB에는 다음 테이블과 컬럼이 존재해야 합니다.
+이미 초기 배포 전에 생성된 스키마라면 별도 마이그레이션이 필요하지 않을 수 있지만,
+기존 DB에 기능을 추가하는 경우 누락 여부를 확인합니다.
+
+### users.deleted_at
+
+회원 탈퇴는 물리 삭제가 아니라 soft delete로 처리합니다.
+
+```sql
+ALTER TABLE users
+ADD COLUMN deleted_at timestamp;
+```
+
+탈퇴 시 이메일, 이름, 비밀번호 해시를 마스킹하고 `deleted_at`을 설정합니다.
+
+### project_messages
+
+프로젝트 채팅과 LOG 메시지를 저장합니다.
+
+```sql
+CREATE TABLE project_messages (
+  id bigserial PRIMARY KEY,
+  project_id bigint NOT NULL,
+  user_id bigint,
+  message_type varchar(10) NOT NULL,
+  content text NOT NULL,
+  created_at timestamp,
+  updated_at timestamp
+);
+```
+
+`user_id`는 LOG 메시지에서 null일 수 있습니다.
+운영 적용 시 실제 FK, 인덱스 이름, timestamp 타입은 기존 스키마 규칙에 맞춰 확정합니다.
+
+---
+
+## 4. 파일 저장 제한 정책
 
 현재 파일 저장 API는 단일 파일 content를 UTF-8 byte 기준 최대 1MB로 제한합니다.
 
@@ -112,7 +150,7 @@ MVP에서는 서버 상수 1MB 기준을 유지합니다.
 
 ---
 
-## 4. Flyway 또는 Liquibase 도입 시점
+## 5. Flyway 또는 Liquibase 도입 시점
 
 즉시 도입하지 않아도 되는 이유:
 
@@ -130,7 +168,7 @@ MVP에서는 서버 상수 1MB 기준을 유지합니다.
 
 ---
 
-## 5. 향후 예상 마이그레이션 후보
+## 6. 향후 예상 마이그레이션 후보
 
 ### 파일/폴더 이름 중복 방지
 
@@ -167,11 +205,13 @@ WHERE parent_id IS NOT NULL;
 
 ---
 
-## 6. 운영 배포 전 체크리스트
+## 7. 운영 배포 전 체크리스트
 
 - [ ] 운영 환경에서 `ddl-auto`를 `validate` 또는 `none`으로 전환할지 결정
 - [ ] `project_files.current_content` 마이그레이션 SQL 확정
 - [ ] `project_files.edit_revision` 마이그레이션 SQL 확정
+- [ ] `users.deleted_at` 컬럼 존재 여부 확인
+- [ ] `project_messages` 테이블 존재 여부 확인
 - [ ] 기존 데이터 기본값 처리 검증
 - [ ] 파일 크기 제한값 설정 분리 여부 결정
 - [ ] PostgreSQL 전용 DDL 사용 여부 검토

@@ -1,6 +1,6 @@
 # Realtime File Collaboration Contract
 
-이 문서는 FlowDeck MVP 이후 WebSocket 기반 파일 협업 기능을 연결하기 위한 계약 초안입니다.
+이 문서는 FlowDeck WebSocket 기반 파일 이벤트, 프로젝트 채팅, 프로젝트 presence 계약을 정리합니다.
 
 현재 백엔드는 CRDT/Yjs 기반 실시간 병합을 도입하지 않습니다.
 
@@ -8,7 +8,7 @@
 
 1. Optimistic Locking
 2. File Save Notification
-3. Editing Presence
+3. Project Presence
 
 ---
 
@@ -36,13 +36,14 @@
 
 이 단계는 충돌을 직접 막기보다 다른 사용자의 변경을 빠르게 인지시키는 역할입니다.
 
-### 3단계: Editing Presence
+### 3단계: Project Presence
 
-Redis + WebSocket 기반으로 누가 파일을 보고 있거나 편집 중인지 표시합니다.
+Redis + WebSocket 기반으로 누가 프로젝트에 접속 중인지 표시합니다.
 
 이 단계는 저장을 막는 lock이 아닙니다.
 
-프론트 상단에 편집자 상태를 고정 표시하여 충돌 가능성을 줄이는 UX입니다.
+프론트 상단 또는 사이드 영역에 프로젝트 접속자를 표시하여 협업 상태를 보여주는 UX입니다.
+파일 단위 `VIEWING`/`EDITING` presence는 아직 도입하지 않았습니다.
 
 ---
 
@@ -110,9 +111,7 @@ Redis + WebSocket 기반으로 누가 파일을 보고 있거나 편집 중인�
 
 파일 또는 폴더 삭제가 성공했을 때 발행합니다.
 
-폴더 삭제 시 하위 파일/폴더가 함께 삭제될 수 있으므로 payload 확장을 검토할 수 있습니다.
-
-후보 확장:
+폴더 삭제 시 하위 파일/폴더가 함께 삭제될 수 있으므로 `deletedFileIds`를 함께 제공합니다.
 
 ```json
 {
@@ -126,8 +125,6 @@ Redis + WebSocket 기반으로 누가 파일을 보고 있거나 편집 중인�
 
 이름변경은 `editRevision`을 증가시키지 않습니다.
 
-후보 확장:
-
 ```json
 {
   "oldName": "Main.java",
@@ -140,8 +137,6 @@ Redis + WebSocket 기반으로 누가 파일을 보고 있거나 편집 중인�
 파일 또는 폴더 이동이 성공했을 때 발행합니다.
 
 이동은 `editRevision`을 증가시키지 않습니다.
-
-후보 확장:
 
 ```json
 {
@@ -190,52 +185,61 @@ Redis + WebSocket 기반으로 누가 파일을 보고 있거나 편집 중인�
 
 ---
 
-## 5. Editing Presence
+## 5. Project Presence
 
 ### 목적
 
-같은 파일을 누가 보고 있거나 편집 중인지 표시합니다.
+같은 프로젝트에 누가 접속 중인지 표시합니다.
 
 충돌을 강제로 막지는 않습니다.
 
 최종 충돌 방지는 `editRevision` 기반 optimistic locking이 담당합니다.
 
-### 상태
+### REST 조회
 
-```text
-VIEWING
-EDITING
+```http
+GET /api/projects/{projectId}/presence
 ```
 
-- `VIEWING`: 사용자가 파일을 열고 있습니다.
-- `EDITING`: 사용자가 최근에 파일 내용을 입력했습니다.
-
-### Redis key 후보
+### STOMP destination
 
 ```text
-presence:file:{fileId}
+/app/projects/{projectId}/presence/join
+/app/projects/{projectId}/presence/heartbeat
+/topic/projects/{projectId}/presence
 ```
 
-value 후보:
+### Response payload
 
 ```json
 {
   "projectId": "project-public-id",
-  "fileId": 1,
-  "userId": 10,
-  "userName": "홍길동",
-  "status": "EDITING",
-  "lastSeenAt": "2026-05-20T12:00:00Z"
+  "connectedCount": 2,
+  "members": [
+    {
+      "userId": 10,
+      "userName": "홍길동",
+      "sessionCount": 1,
+      "lastSeenAt": "2026-05-20T12:00:00Z"
+    }
+  ],
+  "occurredAt": "2026-05-20T12:00:00Z"
 }
 ```
 
-### TTL / heartbeat 후보
+### Redis key
 
-- TTL: 30초
-- heartbeat: 10초
-- 마지막 입력 후 10초 동안 `EDITING`
-- 입력이 없으면 `VIEWING`으로 전환
-- heartbeat가 끊기면 Redis TTL로 자동 제거
+```text
+presence:project:{projectId}
+ws:session:{sessionId}
+presence:user:{userId}
+```
+
+- `presence:project:{projectId}`: 프로젝트별 sessionId sorted set. score는 마지막 heartbeat epoch millis입니다.
+- `ws:session:{sessionId}`: `projectId`, `userId`, `lastSeenAt`를 저장하며 TTL 30초를 사용합니다.
+- `presence:user:{userId}`: 사용자별 sessionId 보조 인덱스이며 TTL 60초를 사용합니다.
+
+heartbeat가 끊기면 `ws:session:{sessionId}` TTL과 stale session pruning으로 접속 상태에서 제거됩니다.
 
 ### 프론트 표시 기준
 
@@ -253,9 +257,34 @@ value 후보:
 김철수님 외 2명이 이 파일을 보고 있습니다.
 ```
 
+현재 payload는 프로젝트 접속자 기준이므로 파일명/편집 상태는 포함하지 않습니다.
+파일 단위 viewing/editing 표시가 필요하면 별도 `presence:file:{fileId}` 구조와 상태 필드를 추가로 설계합니다.
+
 ---
 
-## 6. 도입하지 않는 범위
+## 6. 프로젝트 메시지 WebSocket
+
+### STOMP destination
+
+```text
+/app/projects/{projectId}/messages
+/topic/projects/{projectId}/messages
+```
+
+### REST API
+
+```http
+GET /api/projects/{projectId}/messages
+GET /api/projects/{projectId}/messages/search
+DELETE /api/projects/{projectId}/messages/{messageId}
+```
+
+프로젝트 메시지는 `CHAT`과 `LOG` 타입을 사용합니다.
+사용자 채팅은 STOMP 또는 REST 조회 흐름으로 사용하고, 시스템/파일 이벤트성 기록은 `LOG` 메시지로 남길 수 있습니다.
+
+---
+
+## 7. 도입하지 않는 범위
 
 MVP에서는 다음 기능을 도입하지 않습니다.
 
@@ -263,21 +292,20 @@ MVP에서는 다음 기능을 도입하지 않습니다.
 - Redis 기반 강제 편집 lock
 - 먼저 편집한 사용자만 저장 가능한 단일 편집자 정책
 - 라인별 커서/선택 영역 공유
+- 파일 단위 `VIEWING`/`EDITING` presence
 
 이유:
 
 - lock 해제, TTL 연장, 브라우저 종료, 네트워크 단절 처리가 필요합니다.
 - 프론트 UX 합의가 필요합니다.
-- MVP에서는 `editRevision` 충돌 방지와 WebSocket 알림만으로도 덮어쓰기 위험을 줄일 수 있습니다.
+- MVP에서는 `editRevision` 충돌 방지, 파일 WebSocket 이벤트, 프로젝트 presence만으로도 덮어쓰기 위험과 협업 상태 인지 문제를 일부 줄일 수 있습니다.
 
 ---
 
-## 7. 후속 결정 필요 사항
+## 8. 후속 결정 필요 사항
 
-- BE3 WebSocket destination naming
-- 프로젝트 단위 구독과 파일 단위 구독 중 선택
-- 파일 이벤트 payload 최종 필드
 - 채팅 LOG와 파일 이벤트를 같은 timeline에 보여줄지 여부
-- Editing Presence Redis 자료구조
-- 프론트 상단 presence UI 위치
-- 파일 삭제 시 하위 파일 id payload 포함 여부
+- 파일 단위 presence를 도입할지 여부
+- 파일 단위 presence Redis 자료구조
+- 파일 단위 presence 프론트 UI 위치
+- 파일 이벤트와 프로젝트 메시지 LOG의 중복 표시 정책

@@ -25,6 +25,7 @@
 - 필요하면 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JPA_DDL_AUTO`, `JPA_SHOW_SQL`로 값을 덮어쓰기 가능
 - 개발 Docker 환경은 `docker compose --env-file .env -f docker-compose.dev.yaml up -d --build`로 실행
 - 개발 예시 환경 변수 : `.env.dev.example`
+- 개발 Docker 기본 포트는 호스트 `8081`입니다. 컨테이너 내부 Spring Boot 포트 `8080`에 매핑됩니다.
 
 ## AWS Docker 배포
 
@@ -33,6 +34,35 @@
 - 운영 compose는 [`docker-compose.prod.yaml`](docker-compose.prod.yaml) 입니다.
 - 운영 서버에는 `.env.prod.example` 을 복사한 `.env.prod` 를 만들고 실제 비밀값을 채웁니다.
 - `.env`, `.env.prod` 는 Git에 커밋하지 않습니다.
+- 운영 Docker 기본 포트는 호스트 `8080`입니다. 필요하면 `BACKEND_PORT`로 호스트 포트만 변경할 수 있습니다.
+- 자동 배포는 [`Deploy AWS Backend`](.github/workflows/deploy-aws.yml) 워크플로에서 처리합니다.
+  - `develop` push/merge: `backend-dev` 서버에 배포
+  - `main` push/merge: `backend-prod` 서버에 배포
+  - 배포 전 `./gradlew check` 가 통과해야 합니다.
+
+### GitHub Actions 배포 설정
+
+Repository Settings > Secrets and variables > Actions 에 아래 값을 등록합니다.
+
+Secrets:
+
+- `DEV_SSH_HOST`: 개발 서버 호스트 또는 IP
+- `DEV_SSH_USER`: 개발 서버 SSH 사용자
+- `DEV_SSH_PRIVATE_KEY`: 개발 서버 접속용 private key
+- `DEV_SSH_PORT`: 개발 서버 SSH 포트, 기본 포트면 생략 가능
+- `PROD_SSH_HOST`: 운영 서버 호스트 또는 IP
+- `PROD_SSH_USER`: 운영 서버 SSH 사용자
+- `PROD_SSH_PRIVATE_KEY`: 운영 서버 접속용 private key
+- `PROD_SSH_PORT`: 운영 서버 SSH 포트, 기본 포트면 생략 가능
+
+Variables:
+
+- `DEV_APP_DIR`: 개발 서버의 repo 경로, 예: `/opt/flowdeck/backend-dev/app`
+- `DEV_ENV_FILE`: 개발 서버 env 파일 경로, 예: `.env`
+- `PROD_APP_DIR`: 운영 서버의 repo 경로, 예: `/opt/flowdeck/backend-prod/app`
+- `PROD_ENV_FILE`: 운영 서버 env 파일 경로, 예: `.env.prod`
+
+서버에는 미리 GitHub에 접근 가능한 repo clone, Docker, Docker Compose plugin, env 파일이 준비되어 있어야 합니다.
 
 개발 서버 예시:
 
