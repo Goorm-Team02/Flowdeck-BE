@@ -32,6 +32,7 @@
 - 프론트엔드 로컬 연동용 compose는 [`docker-compose.local.yaml`](docker-compose.local.yaml) 입니다.
 - `PostgreSQL`, `Redis`, `Backend`를 한 번에 실행합니다.
 - 로컬 예시 환경 변수는 [`.env.local.example`](.env.local.example) 입니다.
+- 운영/개발 DB 버전과 맞춰야 하면 `.env.local`의 `POSTGRES_IMAGE` 값을 변경합니다.
 - 실행:
 
 ```bash
