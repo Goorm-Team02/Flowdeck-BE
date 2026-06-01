@@ -27,6 +27,36 @@
 - 개발 예시 환경 변수 : `.env.dev.example`
 - 개발 Docker 기본 포트는 호스트 `8081`입니다. 컨테이너 내부 Spring Boot 포트 `8080`에 매핑됩니다.
 
+## 프론트엔드 로컬 연동 Docker
+
+- 프론트엔드 로컬 연동용 compose는 [`docker-compose.local.yaml`](docker-compose.local.yaml) 입니다.
+- `PostgreSQL`, `Redis`, `Backend`를 한 번에 실행합니다.
+- 로컬 예시 환경 변수는 [`.env.local.example`](.env.local.example) 입니다.
+- 실행:
+
+```bash
+cp .env.local.example .env.local
+docker compose --env-file .env.local -f docker-compose.local.yaml up -d --build
+```
+
+- 종료:
+
+```bash
+docker compose --env-file .env.local -f docker-compose.local.yaml down
+```
+
+- 로컬 연동 URL:
+  - REST API: `http://localhost:8081`
+  - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+  - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+  - WebSocket/STOMP: `ws://localhost:8081/ws`
+- 프론트엔드 환경 변수 예시:
+
+```env
+VITE_API_BASE_URL=http://localhost:8081
+VITE_WS_URL=ws://localhost:8081/ws
+```
+
 ## AWS Docker 배포
 
 - 개발 Docker 이미지는 [`backend/Dockerfile.dev`](backend/Dockerfile.dev) 로 빌드합니다.
