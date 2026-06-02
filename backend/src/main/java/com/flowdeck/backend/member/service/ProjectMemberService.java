@@ -4,12 +4,15 @@ import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.global.security.jwt.JwtProperties;
+import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
 import com.flowdeck.backend.member.dto.MemberInviteRequest;
 import com.flowdeck.backend.member.dto.MemberListResponse;
 import com.flowdeck.backend.member.dto.MemberResponse;
+import com.flowdeck.backend.member.dto.MemberRoleChangedEventResponse;
 import com.flowdeck.backend.member.dto.MemberRoleUpdateRequest;
+import com.flowdeck.backend.member.realtime.ProjectMemberBroadcaster;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.project.domain.Project;
@@ -18,6 +21,7 @@ import com.flowdeck.backend.projectmessage.service.ProjectMessageService;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +36,8 @@ public class ProjectMemberService {
   private final AuthTokenService authTokenService;
   private final JwtProperties jwtProperties;
   private final ProjectMessageService projectMessageService;
+  private final ProjectMemberBroadcaster projectMemberBroadcaster;
+  private final AfterCommitExecutor afterCommitExecutor;
 
   public ProjectMemberService(
       ProjectRepository projectRepository,
@@ -40,7 +46,9 @@ public class ProjectMemberService {
       PermissionService permissionService,
       AuthTokenService authTokenService,
       JwtProperties jwtProperties,
-      ProjectMessageService projectMessageService) {
+      ProjectMessageService projectMessageService,
+      ProjectMemberBroadcaster projectMemberBroadcaster,
+      AfterCommitExecutor afterCommitExecutor) {
     this.projectRepository = projectRepository;
     this.userRepository = userRepository;
     this.projectMemberRepository = projectMemberRepository;
@@ -48,6 +56,8 @@ public class ProjectMemberService {
     this.authTokenService = authTokenService;
     this.jwtProperties = jwtProperties;
     this.projectMessageService = projectMessageService;
+    this.projectMemberBroadcaster = projectMemberBroadcaster;
+    this.afterCommitExecutor = afterCommitExecutor;
   }
 
   @Transactional(readOnly = true)
@@ -106,6 +116,18 @@ public class ProjectMemberService {
     member.updateRole(request.getRole());
     authTokenService.deleteRefreshToken(member.getUser().getId());
     authTokenService.forceLogout(member.getUser().getId(), forceLogoutTtl());
+    MemberRoleChangedEventResponse event =
+        MemberRoleChangedEventResponse.of(
+            projectId,
+            member.getId(),
+            member.getUser().getPublicId(),
+            previousRole,
+            request.getRole(),
+            requesterId,
+            requester.getName(),
+            Instant.now());
+    afterCommitExecutor.run(
+        () -> projectMemberBroadcaster.broadcastRoleChanged(member.getUser().getEmail(), event));
     projectMessageService.createLogMessage(
         projectId,
         requesterId,

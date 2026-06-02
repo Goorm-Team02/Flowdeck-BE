@@ -98,6 +98,15 @@ class StompJwtChannelInterceptorTest {
   }
 
   @Test
+  void subscribeToFileEditingValidatesProjectAccess() {
+    Message<?> message = subscribeMessage("/topic/projects/project-123/files/11/editing", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verify(permissionService).validateProjectAccess("project-123", 7L);
+  }
+
+  @Test
   void subscribeToNonProjectDestinationSkipsProjectAccessValidation() {
     Message<?> message = subscribeMessage("/topic/system/health", 7L);
 
@@ -124,6 +133,24 @@ class StompJwtChannelInterceptorTest {
     interceptor.preSend(message, mock(MessageChannel.class));
 
     verify(permissionService).validateEditor("project-123", 7L);
+  }
+
+  @Test
+  void sendToFileEditingValidatesEditorPermission() {
+    Message<?> message = sendMessage("/app/projects/project-123/files/11/editing/start", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verify(permissionService).validateEditor("project-123", 7L);
+  }
+
+  @Test
+  void sendToFileEditingStopValidatesProjectAccess() {
+    Message<?> message = sendMessage("/app/projects/project-123/files/11/editing/stop", 7L);
+
+    interceptor.preSend(message, mock(MessageChannel.class));
+
+    verify(permissionService).validateProjectAccess("project-123", 7L);
   }
 
   @Test
