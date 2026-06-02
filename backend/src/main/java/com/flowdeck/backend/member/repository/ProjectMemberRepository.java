@@ -7,6 +7,8 @@ import com.flowdeck.backend.user.domain.User;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
@@ -21,6 +23,17 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
   List<ProjectMember> findAllByUserAndRole(User user, ProjectRole role);
 
   List<ProjectMember> findAllByUser(User user);
+
+  @Query(
+      """
+      select projectMember
+      from ProjectMember projectMember
+      join fetch projectMember.project project
+      where projectMember.user.id = :userId
+      order by project.createdAt desc
+      """)
+  List<ProjectMember> findAllWithProjectByUserIdOrderByProjectCreatedAtDesc(
+      @Param("userId") Long userId);
 
   boolean existsByProjectAndUser(Project project, User user);
 

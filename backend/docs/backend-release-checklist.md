@@ -214,7 +214,8 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 ### 프로젝트
 
 - [ ] 프로젝트 생성
-- [ ] 프로젝트 목록 조회
+- [ ] 참여 프로젝트 목록 조회 (`GET /api/projects`)
+- [ ] 공개 프로젝트 목록 조회 (`GET /api/projects/public`)
 - [ ] 프로젝트 상세 조회
 - [ ] 프로젝트 수정
 - [ ] 프로젝트 삭제

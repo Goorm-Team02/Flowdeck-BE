@@ -60,6 +60,21 @@ public class ProjectService {
   }
 
   @Transactional(readOnly = true)
+  public ProjectListResponse getProjects(Long userId) {
+    validateAuthenticatedUser(userId);
+
+    List<ProjectResponse> projects =
+        projectMemberRepository
+            .findAllWithProjectByUserIdOrderByProjectCreatedAtDesc(userId)
+            .stream()
+            .map(ProjectMember::getProject)
+            .map(ProjectResponse::from)
+            .toList();
+
+    return ProjectListResponse.from(projects);
+  }
+
+  @Transactional(readOnly = true)
   public ProjectResponse getProject(String projectId, Long userId) {
     permissionService.validateProjectAccess(projectId, userId);
 
