@@ -4,6 +4,10 @@
 
 현재 백엔드는 CRDT/Yjs 기반 실시간 병합을 도입하지 않습니다.
 
+STOMP `CONNECT` 요청은 REST API와 동일하게 Access Token blacklist와
+force logout cutoff를 검증합니다. 로그아웃되었거나 권한 변경 이전에 발급된
+Access Token으로는 새로운 WebSocket 연결을 만들 수 없습니다.
+
 파일 충돌 방지는 다음 3단계 흐름으로 관리합니다.
 
 1. Optimistic Locking

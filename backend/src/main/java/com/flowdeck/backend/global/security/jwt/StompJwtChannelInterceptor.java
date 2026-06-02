@@ -1,5 +1,6 @@
 package com.flowdeck.backend.global.security.jwt;
 
+import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.file.realtime.ProjectFileDestinations;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.presence.realtime.ProjectPresenceDestinations;
@@ -23,11 +24,15 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
   private static final String BEARER_PREFIX = "Bearer ";
 
   private final JwtTokenProvider jwtTokenProvider;
+  private final AuthTokenService authTokenService;
   private final PermissionService permissionService;
 
   public StompJwtChannelInterceptor(
-      JwtTokenProvider jwtTokenProvider, PermissionService permissionService) {
+      JwtTokenProvider jwtTokenProvider,
+      AuthTokenService authTokenService,
+      PermissionService permissionService) {
     this.jwtTokenProvider = jwtTokenProvider;
+    this.authTokenService = authTokenService;
     this.permissionService = permissionService;
   }
 
@@ -67,6 +72,16 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
     }
 
     String accessToken = authorizationHeader.substring(BEARER_PREFIX.length());
+    if (authTokenService.isBlacklisted(accessToken)) {
+      throw new IllegalStateException("WebSocket access token is invalid.");
+    }
+
+    Long userId = jwtTokenProvider.getUserId(accessToken);
+    long tokenIssuedAtMillis = jwtTokenProvider.getTokenIssuedAtMillis(accessToken);
+    if (authTokenService.isForceLogout(userId, tokenIssuedAtMillis)) {
+      throw new IllegalStateException("WebSocket access token is invalid.");
+    }
+
     Authentication authentication = jwtTokenProvider.getAuthentication(accessToken);
     return authentication;
   }
