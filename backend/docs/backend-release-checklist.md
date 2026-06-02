@@ -21,6 +21,7 @@ FlowDeck 백엔드 배포 전 확인해야 할 운영 체크리스트입니다.
 
 - [ ] `REDIS_HOST`
 - [ ] `REDIS_PORT`
+- [ ] `REDIS_SSL_ENABLED` (`ElastiCache` 전송 중 암호화 사용 시 `true`)
 - [ ] Redis 접속 확인
 - [ ] 인증용 Redis key prefix 충돌 여부 확인
 
