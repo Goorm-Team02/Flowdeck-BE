@@ -170,14 +170,13 @@ Ctrl+S 또는 일반 저장 시 현재 작업 내용을 저장합니다.
 
 ### 동시 편집 범위
 
-현재 MVP에서는 CRDT/Yjs 기반 실시간 병합과 파일 편집 lock을 제공하지 않습니다.
+현재 MVP에서는 CRDT/Yjs 기반 실시간 병합과 서버 저장 API 강제 편집 lock을 제공하지 않습니다.
 
 여러 사용자가 같은 파일을 동시에 편집할 수 있지만,
 저장 시점에 `baseRevision`과 서버의 `editRevision`을 비교해
 오래된 기준의 저장 요청은 `409 FILE_409`로 거부합니다.
 
-WebSocket 파일 저장 알림, 편집 presence,
-저장 전 충돌 가능성 선제 경고는 후속 기능으로 검토합니다.
+WebSocket 파일 저장 알림과 파일 편집 presence로 다른 사용자의 변경 및 편집 상태를 안내합니다.
 
 ---
 
@@ -443,8 +442,7 @@ DELETE /api/projects/{projectId}/files/{fileId}?expectedRevision=5
 - `expectedRevision`이 현재 `editRevision`과 같으면 삭제합니다.
 - `expectedRevision`이 현재 `editRevision`과 다르면 `FILE_409` 충돌 응답을 반환합니다.
 - MVP 기준으로 폴더 삭제 시 하위 파일 전체 revision은 검사하지 않습니다.
-- 하위 파일 편집 중 삭제 위험은 WebSocket 파일 이벤트와 프로젝트 presence로 일부 보완합니다.
-- 파일 단위 편집 presence가 필요하면 별도 계약으로 추가합니다.
+- 하위 파일 편집 중 삭제 위험은 WebSocket 파일 이벤트와 파일 편집 presence로 일부 보완합니다.
 
 ---
 
@@ -536,8 +534,8 @@ MVP 기준으로 이름변경과 이동은 `editRevision`을 증가시키지 않
 ## 11. 추후 검토 항목
 
 - 프론트 충돌 모달 UX
-- 편집 presence 및 파일 저장/복원 WebSocket 알림
-- 파일 편집 lock 또는 soft lock 도입 여부
+- 파일 저장/복원 WebSocket 알림
+- 서버 저장 API까지 편집 lock을 강제할지 여부
 - 파일 트리 변경 WebSocket 이벤트 payload
 - `metadataRevision` 또는 `treeRevision` 도입 여부
 - 자동 저장 on/off 정책

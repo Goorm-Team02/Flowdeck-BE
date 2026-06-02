@@ -1,6 +1,7 @@
 package com.flowdeck.backend.global.security.jwt;
 
 import com.flowdeck.backend.file.realtime.ProjectFileDestinations;
+import com.flowdeck.backend.fileediting.realtime.FileEditingDestinations;
 import com.flowdeck.backend.permission.service.PermissionService;
 import com.flowdeck.backend.presence.realtime.ProjectPresenceDestinations;
 import com.flowdeck.backend.projectmessage.realtime.ProjectMessageDestinations;
@@ -85,6 +86,9 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
     if (projectId == null) {
       projectId = ProjectFileDestinations.extractProjectIdFromFilesTopic(destination);
     }
+    if (projectId == null) {
+      projectId = FileEditingDestinations.extractProjectIdFromEditingTopic(destination);
+    }
 
     if (projectId == null) {
       return;
@@ -95,8 +99,21 @@ public class StompJwtChannelInterceptor implements ChannelInterceptor {
 
   private void validateProjectSend(StompHeaderAccessor accessor) {
     String projectId =
+        FileEditingDestinations.extractProjectIdFromEditingStopApplicationDestination(
+            accessor.getDestination());
+    if (projectId != null) {
+      permissionService.validateProjectAccess(projectId, extractUserId(accessor.getUser()));
+      return;
+    }
+
+    projectId =
         ProjectMessageDestinations.extractProjectIdFromMessagesApplicationDestination(
             accessor.getDestination());
+    if (projectId == null) {
+      projectId =
+          FileEditingDestinations.extractProjectIdFromEditingApplicationDestination(
+              accessor.getDestination());
+    }
     if (projectId == null) {
       return;
     }
