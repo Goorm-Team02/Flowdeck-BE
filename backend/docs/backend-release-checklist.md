@@ -300,7 +300,7 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] `FILE_RENAMED` 이벤트 payload 구현
 - [x] `FILE_MOVED` 이벤트 payload 구현
 - [x] 프로젝트 presence payload 구현
-- [ ] 파일 단위 presence 도입 여부 결정
+- [x] 파일 단위 editing presence 도입
 - [x] Redis presence TTL / heartbeat 정책 확정
   - 프로젝트 접속 presence TTL 30초, 클라이언트 heartbeat 10초 기준
 
@@ -337,5 +337,5 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
 - [x] 파일 이벤트 WebSocket 발행 구현
 - [x] 프로젝트 presence 구현
-- [ ] 파일 단위 presence 구현 여부 결정
+- [x] 파일 단위 editing presence 구현
 - [ ] `metadataRevision` 또는 `treeRevision` 도입 여부 검토
