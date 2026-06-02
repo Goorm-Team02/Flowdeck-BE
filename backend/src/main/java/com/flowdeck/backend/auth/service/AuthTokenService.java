@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -43,11 +44,14 @@ public class AuthTokenService {
   }
 
   public void forceLogout(Long userId, Duration ttl) {
-    stringRedisTemplate.opsForValue().set(forceLogoutKey(userId), "1", ttl);
+    stringRedisTemplate
+        .opsForValue()
+        .set(forceLogoutKey(userId), String.valueOf(Instant.now().toEpochMilli()), ttl);
   }
 
-  public boolean isForceLogout(Long userId) {
-    return Boolean.TRUE.equals(stringRedisTemplate.hasKey(forceLogoutKey(userId)));
+  public boolean isForceLogout(Long userId, long tokenIssuedAtMillis) {
+    String forcedAtMillis = stringRedisTemplate.opsForValue().get(forceLogoutKey(userId));
+    return forcedAtMillis != null && tokenIssuedAtMillis <= Long.parseLong(forcedAtMillis);
   }
 
   private String refreshKey(Long userId) {

@@ -101,7 +101,7 @@ Key는 도메인 prefix를 포함합니다.
 
 - `auth:refresh:{userId}`: Refresh Token 저장 (백엔드1)
 - `auth:blacklist:{sha256(accessToken)}`: 로그아웃/회원 탈퇴된 Access Token 차단 (백엔드1)
-- `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 강제 로그아웃 플래그 (백엔드1)
+- `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 이전 Access Token을 차단하기 위한 cutoff epoch millis. TTL은 Access Token 만료 시간과 동일하게 설정합니다. (백엔드1)
 - `presence:project:{projectId}`: 프로젝트 접속 세션 상태. score는 마지막 heartbeat 시각 epoch millis 입니다. (백엔드3)
 - `ws:session:{sessionId}`: WebSocket 세션 보조. `projectId`, `userId`, `lastSeenAt`를 저장하며 TTL 30초를 사용합니다. 사용자 이름은 저장하지 않습니다. (백엔드3)
 - `presence:user:{userId}`: 사용자별 WebSocket sessionId 보조 인덱스. 회원 탈퇴 등 사용자 단위 presence 정리에 사용하며 TTL 60초를 사용합니다. (백엔드3)

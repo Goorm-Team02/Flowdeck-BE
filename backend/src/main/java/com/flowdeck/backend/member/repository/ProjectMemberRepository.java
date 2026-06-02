@@ -30,7 +30,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
       from ProjectMember projectMember
       join fetch projectMember.project project
       where projectMember.user.id = :userId
-      order by project.createdAt desc
+      order by project.createdAt desc, project.id desc
       """)
   List<ProjectMember> findAllWithProjectByUserIdOrderByProjectCreatedAtDesc(
       @Param("userId") Long userId);

@@ -51,7 +51,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       }
 
       Long userId = jwtTokenProvider.getUserId(accessToken);
-      if (authTokenService.isForceLogout(userId)) {
+      long tokenIssuedAtMillis = jwtTokenProvider.getTokenIssuedAtMillis(accessToken);
+      if (authTokenService.isForceLogout(userId, tokenIssuedAtMillis)) {
         throw new BusinessException(ErrorCode.INVALID_TOKEN);
       }
 

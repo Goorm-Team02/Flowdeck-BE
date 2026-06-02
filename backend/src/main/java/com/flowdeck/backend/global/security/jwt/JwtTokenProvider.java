@@ -23,6 +23,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtTokenProvider {
 
+  private static final String TOKEN_ISSUED_AT_MILLIS_CLAIM = "tokenIssuedAtMillis";
+
   private final JwtEncoder jwtEncoder;
   private final JwtDecoder jwtDecoder;
   private final JwtProperties jwtProperties;
@@ -44,6 +46,7 @@ public class JwtTokenProvider {
             .subject(subject)
             .claim("userId", userId)
             .claim("roles", roles)
+            .claim(TOKEN_ISSUED_AT_MILLIS_CLAIM, now.toEpochMilli())
             .build();
 
     return jwtEncoder
@@ -104,6 +107,22 @@ public class JwtTokenProvider {
     }
 
     return userIdClaim.longValue();
+  }
+
+  public long getTokenIssuedAtMillis(String token) {
+    Jwt jwt = parse(token);
+    Number tokenIssuedAtMillis = jwt.getClaim(TOKEN_ISSUED_AT_MILLIS_CLAIM);
+
+    if (tokenIssuedAtMillis != null) {
+      return tokenIssuedAtMillis.longValue();
+    }
+
+    Instant issuedAt = jwt.getIssuedAt();
+    if (issuedAt == null) {
+      throw new BusinessException(ErrorCode.INVALID_TOKEN);
+    }
+
+    return issuedAt.toEpochMilli();
   }
 
   public void validateRefreshToken(String token) {

@@ -77,6 +77,7 @@ class ProjectMemberForceLogoutTest {
 
     assertThat(editorMember.getRole()).isEqualTo(ProjectRole.VIEWER);
     assertThat(authTokenService.forceLogoutUserIds()).containsExactly(editor.getId());
+    assertThat(authTokenService.deletedRefreshTokenUserIds()).containsExactly(editor.getId());
   }
 
   @Test
@@ -95,6 +96,7 @@ class ProjectMemberForceLogoutTest {
 
     assertThat(projectMemberRepository.findById(editorMember.getId())).isEmpty();
     assertThat(authTokenService.forceLogoutUserIds()).containsExactly(editor.getId());
+    assertThat(authTokenService.deletedRefreshTokenUserIds()).containsExactly(editor.getId());
   }
 
   @Test
@@ -113,6 +115,8 @@ class ProjectMemberForceLogoutTest {
                 testProject.projectId(), testProject.owner()))
         .isEmpty();
     assertThat(authTokenService.forceLogoutUserIds()).containsExactly(testProject.owner().getId());
+    assertThat(authTokenService.deletedRefreshTokenUserIds())
+        .containsExactly(testProject.owner().getId());
   }
 
   private TestProject createProjectWithOwner(String email) {
@@ -157,6 +161,7 @@ class ProjectMemberForceLogoutTest {
   static class RecordingAuthTokenService extends AuthTokenService {
 
     private final List<Long> forceLogoutUserIds = new ArrayList<>();
+    private final List<Long> deletedRefreshTokenUserIds = new ArrayList<>();
 
     RecordingAuthTokenService() {
       super(null);
@@ -167,12 +172,22 @@ class ProjectMemberForceLogoutTest {
       forceLogoutUserIds.add(userId);
     }
 
+    @Override
+    public void deleteRefreshToken(Long userId) {
+      deletedRefreshTokenUserIds.add(userId);
+    }
+
     List<Long> forceLogoutUserIds() {
       return forceLogoutUserIds;
     }
 
+    List<Long> deletedRefreshTokenUserIds() {
+      return deletedRefreshTokenUserIds;
+    }
+
     void clear() {
       forceLogoutUserIds.clear();
+      deletedRefreshTokenUserIds.clear();
     }
   }
 }

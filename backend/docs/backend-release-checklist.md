@@ -113,9 +113,11 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 로그아웃 시 refresh token 삭제 확인
 - [ ] 회원 탈퇴 시 refresh token 삭제 확인
 - [ ] 회원 탈퇴 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
-- [ ] 회원 탈퇴 시 `auth:force-logout:{userId}` 저장 확인
+- [ ] 회원 탈퇴 시 `auth:force-logout:{userId}` cutoff timestamp 저장 확인
 - [ ] 회원 탈퇴 시 `presence:user:{userId}` 기반 WebSocket presence 세션 제거 확인
-- [ ] 멤버 권한 변경/탈퇴 시 `auth:force-logout:{userId}` 저장 확인
+- [ ] 멤버 권한 변경/탈퇴 시 `auth:force-logout:{userId}` cutoff timestamp 저장 확인
+- [ ] 멤버 권한 변경/탈퇴 시 기존 refresh token 삭제 확인
+- [ ] force logout 이전 Access Token 차단 및 재로그인 후 신규 Access Token 허용 확인
 - [ ] TTL이 의도한 시간으로 설정되는지 확인
 - [x] Redis 토큰 원문 저장 제거 및 해시 저장 전환 반영
 
