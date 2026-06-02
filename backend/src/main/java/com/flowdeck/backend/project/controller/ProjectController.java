@@ -38,6 +38,12 @@ public class ProjectController {
         "프로젝트가 생성되었습니다.", projectService.createProject(request, authentication.getUserId()));
   }
 
+  @GetMapping
+  public ApiResponse<ProjectListResponse> getProjects(
+      @AuthenticationPrincipal JwtAuthentication authentication) {
+    return ApiResponse.success(projectService.getProjects(authentication.getUserId()));
+  }
+
   @GetMapping("/public")
   public ApiResponse<ProjectListResponse> getPublicProjects(
       @AuthenticationPrincipal JwtAuthentication authentication) {

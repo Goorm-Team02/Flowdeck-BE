@@ -52,6 +52,11 @@ class ProjectPublicAccessControllerTest extends JwtBearerTokenTestSupport {
   }
 
   @Test
+  void projectsRejectAnonymousRequest() throws Exception {
+    mockMvc.perform(get("/api/projects")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void authenticatedUserCanReadPublicProjectEndpoints() throws Exception {
     mockMvc
         .perform(get("/api/projects/public").header(AUTHORIZATION, bearerToken(user.getId())))
