@@ -127,7 +127,7 @@ public class ProjectMemberService {
             requester.getName(),
             Instant.now());
     afterCommitExecutor.run(
-        () -> projectMemberBroadcaster.broadcastRoleChanged(member.getUser().getEmail(), event));
+        () -> projectMemberBroadcaster.broadcastRoleChanged(member.getUser().getPublicId(), event));
     projectMessageService.createLogMessage(
         projectId,
         requesterId,
