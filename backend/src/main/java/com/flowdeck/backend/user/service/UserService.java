@@ -3,6 +3,7 @@ package com.flowdeck.backend.user.service;
 import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.global.security.jwt.JwtProperties;
 import com.flowdeck.backend.global.security.jwt.JwtTokenProvider;
 import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.member.domain.ProjectMember;
@@ -27,7 +28,6 @@ public class UserService {
 
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String WITHDRAWN_USER_NAME = "탈퇴한 사용자";
-  private static final Duration FORCE_LOGOUT_TTL = Duration.ofMinutes(30);
   private static final DateTimeFormatter MASKED_EMAIL_TIMESTAMP_FORMATTER =
       DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -35,6 +35,7 @@ public class UserService {
   private final ProjectMemberRepository projectMemberRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtTokenProvider jwtTokenProvider;
+  private final JwtProperties jwtProperties;
   private final AuthTokenService authTokenService;
   private final AfterCommitExecutor afterCommitExecutor;
   private final ProjectPresenceStore projectPresenceStore;
@@ -44,6 +45,7 @@ public class UserService {
       ProjectMemberRepository projectMemberRepository,
       PasswordEncoder passwordEncoder,
       JwtTokenProvider jwtTokenProvider,
+      JwtProperties jwtProperties,
       AuthTokenService authTokenService,
       AfterCommitExecutor afterCommitExecutor,
       ProjectPresenceStore projectPresenceStore) {
@@ -51,6 +53,7 @@ public class UserService {
     this.projectMemberRepository = projectMemberRepository;
     this.passwordEncoder = passwordEncoder;
     this.jwtTokenProvider = jwtTokenProvider;
+    this.jwtProperties = jwtProperties;
     this.authTokenService = authTokenService;
     this.afterCommitExecutor = afterCommitExecutor;
     this.projectPresenceStore = projectPresenceStore;
@@ -88,7 +91,8 @@ public class UserService {
         () -> {
           authTokenService.deleteRefreshToken(userId);
           authTokenService.blacklistAccessToken(accessToken, remainingDuration);
-          authTokenService.forceLogout(userId, FORCE_LOGOUT_TTL);
+          authTokenService.forceLogout(
+              userId, Duration.ofSeconds(jwtProperties.getAccessTokenExpirationSeconds()));
           projectPresenceStore.removeSessionsByUserId(userId);
         });
   }

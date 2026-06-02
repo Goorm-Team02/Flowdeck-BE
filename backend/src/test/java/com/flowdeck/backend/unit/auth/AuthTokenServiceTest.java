@@ -79,6 +79,35 @@ class AuthTokenServiceTest {
     assertThat(blacklisted).isTrue();
   }
 
+  @Test
+  void forceLogoutStoresCutoffTimestamp() {
+    Duration ttl = Duration.ofMinutes(30);
+
+    authTokenService.forceLogout(USER_ID, ttl);
+
+    verify(valueOperations)
+        .set(
+            org.mockito.ArgumentMatchers.eq("auth:force-logout:" + USER_ID),
+            org.mockito.ArgumentMatchers.matches("\\d+"),
+            org.mockito.ArgumentMatchers.eq(ttl));
+  }
+
+  @Test
+  void isForceLogoutRejectsTokenIssuedAtOrBeforeCutoff() {
+    when(valueOperations.get("auth:force-logout:" + USER_ID)).thenReturn("1000");
+
+    assertThat(authTokenService.isForceLogout(USER_ID, 999)).isTrue();
+    assertThat(authTokenService.isForceLogout(USER_ID, 1000)).isTrue();
+    assertThat(authTokenService.isForceLogout(USER_ID, 1001)).isFalse();
+  }
+
+  @Test
+  void isForceLogoutAllowsTokenWhenCutoffDoesNotExist() {
+    when(valueOperations.get("auth:force-logout:" + USER_ID)).thenReturn(null);
+
+    assertThat(authTokenService.isForceLogout(USER_ID, 1000)).isFalse();
+  }
+
   private String sha256(String value) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");

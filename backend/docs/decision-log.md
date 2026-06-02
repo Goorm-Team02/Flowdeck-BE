@@ -283,7 +283,7 @@ Redis는 빠른 조회와 TTL 기반 임시 데이터에 적합하지만,
 
 - `auth:refresh:{userId}`: Refresh Token 해시 저장
 - `auth:blacklist:{sha256(accessToken)}`: 로그아웃된 Access Token 차단
-- `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 강제 로그아웃
+- `auth:force-logout:{userId}`: 권한 변경/탈퇴 시 이전 Access Token을 차단하기 위한 cutoff epoch millis. TTL은 Access Token 만료 시간과 동일하게 설정합니다.
 - `presence:project:{projectId}`: 프로젝트 접속자 상태
 - `ws:session:{sessionId}`: WebSocket 세션 보조
 - `presence:user:{userId}`: 사용자별 WebSocket sessionId 보조 인덱스
@@ -417,7 +417,7 @@ Testcontainers 기반 PostgreSQL 테스트로 전환해야 합니다.
 
 - refresh token 삭제
 - 현재 access token blacklist 등록
-- force logout 플래그 설정
+- force logout cutoff timestamp 설정
 
 Redis 정리 실패가 DB 탈퇴 트랜잭션을 롤백하지 않도록 Redis 작업은 커밋 후 실행합니다.
 

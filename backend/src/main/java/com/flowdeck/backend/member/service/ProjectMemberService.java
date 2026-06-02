@@ -3,6 +3,7 @@ package com.flowdeck.backend.member.service;
 import com.flowdeck.backend.auth.service.AuthTokenService;
 import com.flowdeck.backend.global.error.BusinessException;
 import com.flowdeck.backend.global.error.ErrorCode;
+import com.flowdeck.backend.global.security.jwt.JwtProperties;
 import com.flowdeck.backend.global.transaction.AfterCommitExecutor;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.domain.ProjectRole;
@@ -28,13 +29,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProjectMemberService {
 
-  private static final Duration FORCE_LOGOUT_TTL = Duration.ofMinutes(30);
-
   private final ProjectRepository projectRepository;
   private final UserRepository userRepository;
   private final ProjectMemberRepository projectMemberRepository;
   private final PermissionService permissionService;
   private final AuthTokenService authTokenService;
+  private final JwtProperties jwtProperties;
   private final ProjectMessageService projectMessageService;
   private final ProjectMemberBroadcaster projectMemberBroadcaster;
   private final AfterCommitExecutor afterCommitExecutor;
@@ -45,6 +45,7 @@ public class ProjectMemberService {
       ProjectMemberRepository projectMemberRepository,
       PermissionService permissionService,
       AuthTokenService authTokenService,
+      JwtProperties jwtProperties,
       ProjectMessageService projectMessageService,
       ProjectMemberBroadcaster projectMemberBroadcaster,
       AfterCommitExecutor afterCommitExecutor) {
@@ -53,6 +54,7 @@ public class ProjectMemberService {
     this.projectMemberRepository = projectMemberRepository;
     this.permissionService = permissionService;
     this.authTokenService = authTokenService;
+    this.jwtProperties = jwtProperties;
     this.projectMessageService = projectMessageService;
     this.projectMemberBroadcaster = projectMemberBroadcaster;
     this.afterCommitExecutor = afterCommitExecutor;
@@ -112,7 +114,8 @@ public class ProjectMemberService {
     }
 
     member.updateRole(request.getRole());
-    authTokenService.forceLogout(member.getUser().getId(), FORCE_LOGOUT_TTL);
+    authTokenService.deleteRefreshToken(member.getUser().getId());
+    authTokenService.forceLogout(member.getUser().getId(), forceLogoutTtl());
     MemberRoleChangedEventResponse event =
         MemberRoleChangedEventResponse.of(
             projectId,
@@ -153,7 +156,8 @@ public class ProjectMemberService {
     }
 
     projectMemberRepository.delete(member);
-    authTokenService.forceLogout(member.getUser().getId(), FORCE_LOGOUT_TTL);
+    authTokenService.deleteRefreshToken(member.getUser().getId());
+    authTokenService.forceLogout(member.getUser().getId(), forceLogoutTtl());
     projectMessageService.createLogMessage(
         projectId,
         requesterId,
@@ -170,13 +174,18 @@ public class ProjectMemberService {
     }
 
     projectMemberRepository.delete(member);
-    authTokenService.forceLogout(userId, FORCE_LOGOUT_TTL);
+    authTokenService.deleteRefreshToken(userId);
+    authTokenService.forceLogout(userId, forceLogoutTtl());
     projectMessageService.createLogMessage(
         projectId, userId, member.getUser().getName() + "님이 프로젝트에서 나갔습니다.");
   }
 
   private boolean isLastOwner(Project project) {
     return projectMemberRepository.countByProjectAndRole(project, ProjectRole.OWNER) <= 1;
+  }
+
+  private Duration forceLogoutTtl() {
+    return Duration.ofSeconds(jwtProperties.getAccessTokenExpirationSeconds());
   }
 
   private Project getProject(String projectId) {

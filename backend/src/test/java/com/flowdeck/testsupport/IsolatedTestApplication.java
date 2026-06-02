@@ -80,7 +80,7 @@ public class IsolatedTestApplication {
       }
 
       @Override
-      public boolean isForceLogout(Long userId) {
+      public boolean isForceLogout(Long userId, long tokenIssuedAtMillis) {
         return false;
       }
     };
