@@ -12,6 +12,7 @@ public class ProjectFileTreeResponse {
   private final String name;
   private final FileType type;
   private final int currentVersion;
+  private final long editRevision;
   private final List<ProjectFileTreeResponse> children = new ArrayList<>();
 
   private ProjectFileTreeResponse(ProjectFile file) {
@@ -20,6 +21,7 @@ public class ProjectFileTreeResponse {
     this.name = file.getName();
     this.type = file.getType();
     this.currentVersion = file.getCurrentVersion();
+    this.editRevision = file.getEditRevision();
   }
 
   public static ProjectFileTreeResponse from(ProjectFile file) {
@@ -48,6 +50,10 @@ public class ProjectFileTreeResponse {
 
   public int getCurrentVersion() {
     return currentVersion;
+  }
+
+  public long getEditRevision() {
+    return editRevision;
   }
 
   public List<ProjectFileTreeResponse> getChildren() {

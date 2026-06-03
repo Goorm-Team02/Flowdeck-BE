@@ -12,7 +12,7 @@ public class CorsConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource(CorsProperties corsProperties) {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(corsProperties.getAllowedOrigins());
+    configuration.setAllowedOriginPatterns(corsProperties.getAllowedOrigins());
     configuration.setAllowedMethods(corsProperties.getAllowedMethods());
     configuration.setAllowedHeaders(corsProperties.getAllowedHeaders());
     configuration.setExposedHeaders(corsProperties.getExposedHeaders());
