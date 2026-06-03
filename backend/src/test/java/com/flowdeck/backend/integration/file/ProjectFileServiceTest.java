@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import com.flowdeck.backend.file.domain.FileType;
 import com.flowdeck.backend.file.domain.ProjectFile;
 import com.flowdeck.backend.file.dto.ProjectFileDetailResponse;
+import com.flowdeck.backend.file.dto.ProjectFileSearchResponse;
+import com.flowdeck.backend.file.dto.ProjectFileTreeResponse;
 import com.flowdeck.backend.file.repository.ProjectFileRepository;
 import com.flowdeck.backend.file.service.ProjectFileService;
 import com.flowdeck.backend.global.error.BusinessException;
@@ -22,6 +24,7 @@ import com.flowdeck.backend.version.domain.FileVersion;
 import com.flowdeck.backend.version.dto.FileConflictResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
 import com.flowdeck.testsupport.DatabaseIntegrationTest;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -93,6 +96,51 @@ class ProjectFileServiceTest {
     assertThat(response.currentVersion()).isZero();
     assertThat(response.editRevision()).isZero();
     assertThat(response.content()).isEmpty();
+  }
+
+  @Test
+  void publicProjectFilesCanBeReadByAuthenticatedNonMember() {
+    Project project =
+        projectRepository.save(
+            new Project("public file project", "description", ProjectVisibility.PUBLIC));
+    User nonMember =
+        userRepository.save(new User("public-file-reader@test.com", "password", "reader"));
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+    file.updateContent("class Main {}");
+    projectFileRepository.save(file);
+
+    List<ProjectFileTreeResponse> tree =
+        projectFileService.getFileTree(project.getPublicId(), nonMember.getId());
+    ProjectFileDetailResponse detail =
+        projectFileService.getFile(project.getPublicId(), nonMember.getId(), file.getId());
+    List<ProjectFileSearchResponse> searchResults =
+        projectFileService.searchFiles(project.getPublicId(), nonMember.getId(), "Main");
+
+    assertThat(tree).extracting(ProjectFileTreeResponse::getName).containsExactly("Main.java");
+    assertThat(detail.content()).isEqualTo("class Main {}");
+    assertThat(searchResults)
+        .extracting(ProjectFileSearchResponse::name)
+        .containsExactly("Main.java");
+  }
+
+  @Test
+  void privateProjectFileDetailRejectsAuthenticatedNonMember() {
+    Project project =
+        projectRepository.save(
+            new Project("private file project", "description", ProjectVisibility.PRIVATE));
+    User nonMember =
+        userRepository.save(new User("private-file-reader@test.com", "password", "reader"));
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+
+    Throwable throwable =
+        catchThrowable(
+            () ->
+                projectFileService.getFile(project.getPublicId(), nonMember.getId(), file.getId()));
+
+    assertThat(throwable).isInstanceOf(BusinessException.class);
+    assertThat(((BusinessException) throwable).getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED);
   }
 
   @Test
