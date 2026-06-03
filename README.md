@@ -58,6 +58,8 @@ VITE_API_BASE_URL=http://localhost:8081
 VITE_WS_URL=ws://localhost:8081/ws
 ```
 
+- 배포된 HTTPS 프론트엔드에서는 WebSocket URL도 `wss://your-backend-domain/ws`로 설정해야 합니다.
+
 ## AWS Docker 배포
 
 - 개발 Docker 이미지는 [`backend/Dockerfile.dev`](backend/Dockerfile.dev) 로 빌드합니다.
@@ -65,6 +67,7 @@ VITE_WS_URL=ws://localhost:8081/ws
 - 운영 compose는 [`docker-compose.prod.yaml`](docker-compose.prod.yaml) 입니다.
 - 운영 서버에는 `.env.prod.example` 을 복사한 `.env.prod` 를 만들고 실제 비밀값을 채웁니다.
 - `.env`, `.env.prod` 는 Git에 커밋하지 않습니다.
+- 프론트엔드 배포 도메인과 프리뷰 도메인은 `.env.prod`의 `CORS_ALLOWED_ORIGINS`에 콤마로 추가합니다. 와일드카드 패턴도 사용할 수 있습니다.
 - 운영 Docker 기본 포트는 호스트 `8080`입니다. 필요하면 `BACKEND_PORT`로 호스트 포트만 변경할 수 있습니다.
 - 자동 배포는 [`Deploy AWS Backend`](.github/workflows/deploy-aws.yml) 워크플로에서 처리합니다.
   - `develop` push/merge: `backend-dev` 서버에 배포

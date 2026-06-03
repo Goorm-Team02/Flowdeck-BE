@@ -52,6 +52,28 @@ class FileFrontendContractControllerTest extends FileWebTestSupport {
   }
 
   @Test
+  void getFileTreeReturnsRevisionNeededForDelete() throws Exception {
+    FileFixture fixture =
+        createOwnerFile(
+            "frontend tree project",
+            "frontend-tree-contract@test.com",
+            "Main.java",
+            "class Main {}",
+            1);
+
+    mockMvc
+        .perform(
+            get("/api/projects/{projectId}/files", fixture.project().getPublicId())
+                .header(AUTHORIZATION, bearerToken(fixture.user().getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data[0].fileId").value(fixture.file().getId()))
+        .andExpect(jsonPath("$.data[0].name").value("Main.java"))
+        .andExpect(jsonPath("$.data[0].currentVersion").value(0))
+        .andExpect(jsonPath("$.data[0].editRevision").value(1));
+  }
+
+  @Test
   void saveFileReturnsStateForFrontendRefresh() throws Exception {
     FileFixture fixture =
         createOwnerFile(
