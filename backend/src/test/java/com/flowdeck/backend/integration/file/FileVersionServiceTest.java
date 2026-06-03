@@ -25,8 +25,10 @@ import com.flowdeck.backend.version.dto.FileTimelineResponse;
 import com.flowdeck.backend.version.dto.FileTimelineVersionResponse;
 import com.flowdeck.backend.version.dto.FileVersionCreateRequest;
 import com.flowdeck.backend.version.dto.FileVersionCreateResponse;
+import com.flowdeck.backend.version.dto.FileVersionDetailResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffLimitResponse;
 import com.flowdeck.backend.version.dto.FileVersionDiffResponse;
+import com.flowdeck.backend.version.dto.FileVersionListResponse;
 import com.flowdeck.backend.version.dto.FileVersionRestoreRequest;
 import com.flowdeck.backend.version.dto.FileVersionRestoreResponse;
 import com.flowdeck.backend.version.repository.FileVersionRepository;
@@ -223,6 +225,62 @@ class FileVersionServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting("errorCode")
         .isEqualTo(ErrorCode.VERSION_NOT_FOUND);
+  }
+
+  @Test
+  void publicProjectVersionsCanBeReadByAuthenticatedNonMember() {
+    Project project =
+        projectRepository.save(
+            new Project("public version project", "description", ProjectVisibility.PUBLIC));
+    User owner =
+        userRepository.save(new User("public-version-owner@test.com", "password", "owner"));
+    User nonMember =
+        userRepository.save(new User("public-version-reader@test.com", "password", "reader"));
+    projectMemberRepository.save(new ProjectMember(project, owner, ProjectRole.OWNER));
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+    FileVersion firstVersion =
+        fileVersionRepository.save(new FileVersion(file, owner.getId(), 1, "class Main {}", "v1"));
+    fileVersionRepository.save(new FileVersion(file, owner.getId(), 2, "class Main { }", "v2"));
+
+    FileVersionListResponse versions =
+        fileVersionService.getVersions(project.getPublicId(), nonMember.getId(), file.getId());
+    FileVersionDetailResponse detail =
+        fileVersionService.getVersion(
+            project.getPublicId(), nonMember.getId(), file.getId(), firstVersion.getId());
+    FileTimelineResponse timeline =
+        fileVersionService.getTimeline(
+            project.getPublicId(), nonMember.getId(), file.getId(), 0, 20);
+    FileVersionDiffResponse diff =
+        fileVersionService.getDiff(project.getPublicId(), nonMember.getId(), file.getId(), 1, 2);
+
+    assertThat(versions.versions()).hasSize(2);
+    assertThat(detail.content()).isEqualTo("class Main {}");
+    assertThat(timeline.totalVersions()).isEqualTo(2);
+    assertThat(diff.fromVersion()).isEqualTo(1);
+    assertThat(diff.toVersion()).isEqualTo(2);
+  }
+
+  @Test
+  void publicProjectVersionCreateStillRequiresMemberEditorPermission() {
+    Project project =
+        projectRepository.save(
+            new Project("public version write project", "description", ProjectVisibility.PUBLIC));
+    User nonMember =
+        userRepository.save(new User("public-version-writer@test.com", "password", "writer"));
+    ProjectFile file =
+        projectFileRepository.save(new ProjectFile(project, null, "Main.java", FileType.FILE));
+
+    assertThatThrownBy(
+            () ->
+                fileVersionService.createVersion(
+                    project.getPublicId(),
+                    nonMember.getId(),
+                    file.getId(),
+                    createVersionRequest("not allowed")))
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.ACCESS_DENIED);
   }
 
   @Test

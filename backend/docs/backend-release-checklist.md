@@ -138,7 +138,9 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] 인증 필요 API가 비로그인 요청을 차단하는지 확인
 - [x] OWNER 전용 API에 EDITOR/VIEWER 접근 불가 확인
 - [x] EDITOR 이상 API에 VIEWER 접근 불가 확인
-- [x] 프로젝트 비멤버 접근 차단 확인
+- [x] PRIVATE 프로젝트 비멤버 접근 차단 확인
+- [x] PUBLIC 프로젝트 비멤버 파일/버전 읽기 허용 확인
+- [x] PUBLIC 프로젝트 비멤버 채팅/presence/멤버/쓰기 접근 차단 확인
 
 ### Swagger
 
@@ -175,6 +177,9 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [x] 주요 파일 API 에러 코드 HTTP 응답 검증
 - [x] 버전 타임라인 pagination 응답 검증
 - [x] 버전 diff 크기 제한 초과 시 `VERSION_413` 응답 검증
+- [x] PUBLIC 프로젝트 비멤버 파일 트리/상세/검색 조회 검증
+- [x] PUBLIC 프로젝트 비멤버 버전 목록/상세/타임라인/diff 조회 검증
+- [x] PUBLIC 프로젝트 비멤버 파일/버전 변경 작업 차단 검증
 
 ---
 
@@ -219,6 +224,8 @@ ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
 - [ ] 프로젝트 생성
 - [ ] 참여 프로젝트 목록 조회 (`GET /api/projects`)
 - [ ] 공개 프로젝트 목록 조회 (`GET /api/projects/public`)
+- [ ] 공개 프로젝트 비멤버 파일/버전 읽기 조회
+- [ ] 공개 프로젝트 비멤버 채팅/presence/멤버/쓰기 접근 차단
 - [ ] 프로젝트 상세 조회
 - [ ] 프로젝트 수정
 - [ ] 프로젝트 삭제

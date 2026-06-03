@@ -80,7 +80,7 @@ public class FileVersionService {
 
   @Transactional(readOnly = true)
   public FileVersionListResponse getVersions(String projectId, Long userId, Long fileId) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
 
@@ -95,7 +95,7 @@ public class FileVersionService {
   @Transactional(readOnly = true)
   public FileVersionDetailResponse getVersion(
       String projectId, Long userId, Long fileId, Long versionId) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
     FileVersion version = getFileVersion(file, versionId);
@@ -106,7 +106,7 @@ public class FileVersionService {
   @Transactional(readOnly = true)
   public FileTimelineResponse getTimeline(
       String projectId, Long userId, Long fileId, int page, int size) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
     int normalizedPage = normalizeTimelinePage(page);
@@ -194,7 +194,7 @@ public class FileVersionService {
   @Transactional(readOnly = true)
   public FileVersionDiffResponse getDiff(
       String projectId, Long userId, Long fileId, int fromVersion, int toVersion) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     ProjectFile file = getProjectFile(projectId, fileId);
 

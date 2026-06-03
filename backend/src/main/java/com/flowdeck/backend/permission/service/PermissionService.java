@@ -5,6 +5,7 @@ import com.flowdeck.backend.global.error.ErrorCode;
 import com.flowdeck.backend.member.domain.ProjectMember;
 import com.flowdeck.backend.member.repository.ProjectMemberRepository;
 import com.flowdeck.backend.project.domain.Project;
+import com.flowdeck.backend.project.domain.ProjectVisibility;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
@@ -33,6 +34,18 @@ public class PermissionService {
   }
 
   @Transactional(readOnly = true)
+  public void validateProjectReadAccess(String projectId, Long userId) {
+    Project project = getProject(projectId);
+    User user = getUser(userId);
+
+    if (project.getVisibility() == ProjectVisibility.PUBLIC) {
+      return;
+    }
+
+    validateProjectMember(project, user);
+  }
+
+  @Transactional(readOnly = true)
   public void validateEditor(String projectId, Long userId) {
     ProjectMember member = findMember(projectId, userId);
     if (!member.canEdit()) {
@@ -53,6 +66,10 @@ public class PermissionService {
     Project project = getProject(projectId);
     User user = getUser(userId);
 
+    return validateProjectMember(project, user);
+  }
+
+  private ProjectMember validateProjectMember(Project project, User user) {
     return projectMemberRepository
         .findByProjectAndUser(project, user)
         .orElseThrow(() -> new BusinessException(ErrorCode.ACCESS_DENIED));

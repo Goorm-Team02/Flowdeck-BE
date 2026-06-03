@@ -77,7 +77,7 @@ public class ProjectFileService {
 
   @Transactional(readOnly = true)
   public List<ProjectFileTreeResponse> getFileTree(String projectId, Long userId) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     Project project = getProject(projectId);
     List<ProjectFile> files =
@@ -109,7 +109,7 @@ public class ProjectFileService {
 
   @Transactional(readOnly = true)
   public ProjectFileDetailResponse getFile(String projectId, Long userId, Long fileId) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     Project project = getProject(projectId);
     ProjectFile file = getFile(project, fileId);
@@ -124,7 +124,7 @@ public class ProjectFileService {
   @Transactional(readOnly = true)
   public List<ProjectFileSearchResponse> searchFiles(
       String projectId, Long userId, String keyword) {
-    permissionService.validateProjectAccess(projectId, userId);
+    permissionService.validateProjectReadAccess(projectId, userId);
 
     if (keyword == null || keyword.isBlank()) {
       throw new BusinessException(ErrorCode.FILE_INVALID_KEYWORD);
