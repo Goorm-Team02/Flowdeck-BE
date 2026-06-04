@@ -3,7 +3,6 @@ name: Deploy AWS Backend
 on:
   push:
     branches:
-      - develop
       - main
   workflow_dispatch:
 
@@ -40,59 +39,6 @@ jobs:
 
       - name: Run backend quality gate
         run: ./gradlew check
-
-  deploy-dev:
-    name: Deploy backend-dev
-    needs: verify
-    if: github.ref_name == 'develop'
-    runs-on: ubuntu-latest
-    environment: backend-dev
-
-    steps:
-      - name: Validate backend-dev deployment configuration
-        env:
-          DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
-          DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
-          DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          DEV_APP_DIR: ${{ vars.DEV_APP_DIR }}
-          DEV_ENV_FILE: ${{ vars.DEV_ENV_FILE }}
-        run: |
-          missing=()
-
-          [[ -n "$DEV_SSH_HOST" ]] || missing+=(DEV_SSH_HOST)
-          [[ -n "$DEV_SSH_USER" ]] || missing+=(DEV_SSH_USER)
-          [[ -n "$DEV_SSH_PRIVATE_KEY" ]] || missing+=(DEV_SSH_PRIVATE_KEY)
-          [[ -n "$DEV_APP_DIR" ]] || missing+=(DEV_APP_DIR)
-          [[ -n "$DEV_ENV_FILE" ]] || missing+=(DEV_ENV_FILE)
-
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing backend-dev deployment configuration: %s\n' "${missing[*]}" >&2
-            exit 1
-          fi
-
-      - name: Deploy develop to backend-dev
-        uses: appleboy/ssh-action@v1.2.2
-        env:
-          APP_DIR: ${{ vars.DEV_APP_DIR }}
-          DEPLOY_BRANCH: develop
-          ENV_FILE: ${{ vars.DEV_ENV_FILE }}
-          COMPOSE_FILE: docker-compose.dev.yaml
-        with:
-          host: ${{ secrets.DEV_SSH_HOST }}
-          username: ${{ secrets.DEV_SSH_USER }}
-          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.DEV_SSH_PORT || 22 }}
-          envs: APP_DIR,DEPLOY_BRANCH,ENV_FILE,COMPOSE_FILE
-          script: |
-            set -euo pipefail
-
-            cd "$APP_DIR"
-            git fetch origin "$DEPLOY_BRANCH"
-            git checkout "$DEPLOY_BRANCH"
-            git pull --ff-only origin "$DEPLOY_BRANCH"
-
-            docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build --remove-orphans
-            docker image prune -f
 
   deploy-prod:
     name: Deploy backend-prod
