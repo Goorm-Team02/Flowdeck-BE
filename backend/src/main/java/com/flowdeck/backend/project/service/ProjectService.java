@@ -14,6 +14,7 @@ import com.flowdeck.backend.project.dto.ProjectListResponse;
 import com.flowdeck.backend.project.dto.ProjectResponse;
 import com.flowdeck.backend.project.dto.ProjectUpdateRequest;
 import com.flowdeck.backend.project.repository.ProjectRepository;
+import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import java.util.List;
@@ -27,6 +28,7 @@ public class ProjectService {
   private final ProjectFileDeletionService projectFileDeletionService;
   private final UserRepository userRepository;
   private final ProjectMemberRepository projectMemberRepository;
+  private final ProjectMessageRepository projectMessageRepository;
   private final PermissionService permissionService;
 
   public ProjectService(
@@ -34,11 +36,13 @@ public class ProjectService {
       ProjectFileDeletionService projectFileDeletionService,
       UserRepository userRepository,
       ProjectMemberRepository projectMemberRepository,
+      ProjectMessageRepository projectMessageRepository,
       PermissionService permissionService) {
     this.projectRepository = projectRepository;
     this.projectFileDeletionService = projectFileDeletionService;
     this.userRepository = userRepository;
     this.projectMemberRepository = projectMemberRepository;
+    this.projectMessageRepository = projectMessageRepository;
     this.permissionService = permissionService;
   }
 
@@ -98,6 +102,7 @@ public class ProjectService {
     permissionService.validateOwner(projectId, userId);
 
     Project project = getProjectByPublicId(projectId);
+    projectMessageRepository.deleteAllByProject(project);
     projectFileDeletionService.deleteProjectFiles(project);
     projectMemberRepository.deleteAllByProject(project);
     projectRepository.delete(project);
