@@ -29,6 +29,7 @@ jobs:
             --parameters 'commands=[
               "set -euxo pipefail",
               "cd /opt/flowdeck/backend-prod/app",
+              "git config --global --add safe.directory /opt/flowdeck/backend-prod/app",
               "git pull origin main",
               "docker compose -f docker-compose.prod.yaml down",
               "docker compose -f docker-compose.prod.yaml up -d --build",
