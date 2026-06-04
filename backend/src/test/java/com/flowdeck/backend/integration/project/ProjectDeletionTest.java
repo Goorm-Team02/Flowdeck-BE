@@ -12,6 +12,8 @@ import com.flowdeck.backend.project.domain.Project;
 import com.flowdeck.backend.project.domain.ProjectVisibility;
 import com.flowdeck.backend.project.repository.ProjectRepository;
 import com.flowdeck.backend.project.service.ProjectService;
+import com.flowdeck.backend.projectmessage.domain.ProjectMessage;
+import com.flowdeck.backend.projectmessage.repository.ProjectMessageRepository;
 import com.flowdeck.backend.user.domain.User;
 import com.flowdeck.backend.user.repository.UserRepository;
 import com.flowdeck.backend.version.domain.FileVersion;
@@ -31,6 +33,7 @@ class ProjectDeletionTest {
   private final ProjectService projectService;
   private final UserRepository userRepository;
   private final ProjectMemberRepository projectMemberRepository;
+  private final ProjectMessageRepository projectMessageRepository;
 
   @Autowired
   ProjectDeletionTest(
@@ -39,6 +42,7 @@ class ProjectDeletionTest {
       FileVersionRepository fileVersionRepository,
       UserRepository userRepository,
       ProjectMemberRepository projectMemberRepository,
+      ProjectMessageRepository projectMessageRepository,
       ProjectService projectService) {
     this.projectRepository = projectRepository;
     this.projectFileRepository = projectFileRepository;
@@ -46,6 +50,7 @@ class ProjectDeletionTest {
     this.projectService = projectService;
     this.userRepository = userRepository;
     this.projectMemberRepository = projectMemberRepository;
+    this.projectMessageRepository = projectMessageRepository;
   }
 
   @Test
@@ -60,6 +65,7 @@ class ProjectDeletionTest {
     ProjectFile file =
         projectFileRepository.save(new ProjectFile(project, folder, "Main.java", FileType.FILE));
     fileVersionRepository.save(new FileVersion(file, null, 1, "class Main {}", "first save"));
+    projectMessageRepository.save(ProjectMessage.log(project, owner.getId(), "프로젝트 생성"));
 
     Long projectId = project.getId();
     Long folderId = folder.getId();
@@ -74,5 +80,6 @@ class ProjectDeletionTest {
     assertThat(projectFileRepository.findById(fileId)).isEmpty();
     assertThat(fileVersionRepository.existsByFileId(fileId)).isFalse();
     assertThat(projectMemberRepository.findById(memberId)).isEmpty();
+    assertThat(projectMessageRepository.findByProjectIdOrderByCreatedAtAsc(projectId)).isEmpty();
   }
 }
