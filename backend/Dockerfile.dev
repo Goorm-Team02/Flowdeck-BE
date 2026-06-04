@@ -1,0 +1,25 @@
+FROM eclipse-temurin:21-jdk-alpine AS builder
+
+WORKDIR /workspace
+
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle ./gradle
+COPY config ./config
+COPY src ./src
+
+RUN chmod +x ./gradlew
+RUN ./gradlew bootJar --no-daemon
+
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+RUN addgroup -S flowdeck && adduser -S flowdeck -G flowdeck
+
+COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
+
+USER flowdeck
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

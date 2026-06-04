@@ -17,11 +17,105 @@
 
 ## 개발용 데이터베이스
 
-- 백엔드 로컬 개발 DB : `PostgreSQL`
+- 백엔드 로컬 개발 인프라 : `PostgreSQL`, `Redis`
 - 기본 로컬 연결 정보:
   - URL: `jdbc:postgresql://localhost:5432/flowdeck`
   - username: `flowdeck`
   - password: `flowdeck`
 - 필요하면 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JPA_DDL_AUTO`, `JPA_SHOW_SQL`로 값을 덮어쓰기 가능
-- 로컬 DB는 `docker compose -f docker-compose.dev.yaml up -d`로 실행
-- 예시 환경 변수 : `.env.example`
+- 개발 Docker 환경은 `docker compose --env-file .env -f docker-compose.dev.yaml up -d --build`로 실행
+- 개발 예시 환경 변수 : `.env.dev.example`
+- 개발 Docker 기본 포트는 호스트 `8081`입니다. 컨테이너 내부 Spring Boot 포트 `8080`에 매핑됩니다.
+
+## 프론트엔드 로컬 연동 Docker
+
+- 프론트엔드 로컬 연동용 compose는 [`docker-compose.local.yaml`](docker-compose.local.yaml) 입니다.
+- `PostgreSQL`, `Redis`, `Backend`를 한 번에 실행합니다.
+- 로컬 예시 환경 변수는 [`.env.local.example`](.env.local.example) 입니다.
+- 운영/개발 DB 버전과 맞춰야 하면 `.env.local`의 `POSTGRES_IMAGE` 값을 변경합니다.
+- 실행:
+
+```bash
+cp .env.local.example .env.local
+docker compose --env-file .env.local -f docker-compose.local.yaml up -d --build
+```
+
+- 종료:
+
+```bash
+docker compose --env-file .env.local -f docker-compose.local.yaml down
+```
+
+- 로컬 연동 URL:
+  - REST API: `http://localhost:8081`
+  - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+  - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+  - WebSocket/STOMP: `ws://localhost:8081/ws`
+- 프론트엔드 환경 변수 예시:
+
+```env
+VITE_API_BASE_URL=http://localhost:8081
+VITE_WS_URL=ws://localhost:8081/ws
+```
+
+- 배포된 HTTPS 프론트엔드에서는 WebSocket URL도 `wss://your-backend-domain/ws`로 설정해야 합니다.
+
+## AWS Docker 배포
+
+- 개발 Docker 이미지는 [`backend/Dockerfile.dev`](backend/Dockerfile.dev) 로 빌드합니다.
+- 운영 Docker 이미지는 [`backend/Dockerfile.prod`](backend/Dockerfile.prod) 로 빌드합니다.
+- 운영 compose는 [`docker-compose.prod.yaml`](docker-compose.prod.yaml) 입니다.
+- 운영 서버에는 `.env.prod.example` 을 복사한 `.env.prod` 를 만들고 실제 비밀값을 채웁니다.
+- `.env`, `.env.prod` 는 Git에 커밋하지 않습니다.
+- 프론트엔드 배포 도메인과 프리뷰 도메인은 `.env.prod`의 `CORS_ALLOWED_ORIGINS`에 콤마로 추가합니다. 와일드카드 패턴도 사용할 수 있습니다.
+- 운영 Docker 기본 포트는 호스트 `8080`입니다. 필요하면 `BACKEND_PORT`로 호스트 포트만 변경할 수 있습니다.
+개발 서버 예시:
+
+```bash
+cd /opt/flowdeck/backend-dev/app
+git checkout develop
+git pull origin develop
+cp .env.dev.example .env
+docker compose --env-file .env -f docker-compose.dev.yaml up -d --build
+```
+
+운영 서버 예시:
+
+```bash
+cd /opt/flowdeck/backend-prod/app
+git checkout main
+git pull origin main
+cp .env.prod.example .env.prod
+docker compose --env-file .env.prod -f docker-compose.prod.yaml up -d --build
+```
+
+운영 권장값:
+
+- `SPRING_PROFILES_ACTIVE=prod`
+- `JPA_DDL_AUTO=validate`
+- `JPA_SHOW_SQL=false`
+- `JWT_SECRET` 은 32바이트 이상의 랜덤 문자열 사용
+- `CORS_ALLOWED_ORIGINS` 는 실제 프론트엔드 도메인만 허용
+
+## 정적 Swagger 문서 배포
+
+- 프론트 공유용 문서는 GitHub Pages 기준으로 배포합니다.
+- 페이지 엔트리는 [`docs/index.html`](docs/index.html) 이고, `develop` 기준 OpenAPI 문서는 워크플로에서 `docs/openapi.json` 으로 생성합니다.
+- `Try it out` 은 정적 문서 배포에서 혼선을 줄이기 위해 비활성화했습니다.
+
+배포 방식:
+
+1. `develop` 브랜치에 머지
+2. [`Swagger Docs Pages`](.github/workflows/swagger-docs-pages.yml) 워크플로 실행
+3. 테스트 컨텍스트에서 `/v3/api-docs` 를 생성
+4. `docs/` 아티팩트를 GitHub Pages에 배포
+
+확인 주소:
+
+- `https://<org-or-user>.github.io/<repo>/`
+- 예: `https://goorm-team02.github.io/Flowdeck-BE/`
+
+주의:
+
+- 이 방식은 문서 확인용입니다.
+- 실제 API 호출, DB/Redis 연동, WebSocket 검증은 포함하지 않습니다.

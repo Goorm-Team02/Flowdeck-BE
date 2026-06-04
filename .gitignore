@@ -53,7 +53,7 @@ jacoco.exec
 # 환경변수 / 로컬 설정 / 비밀값
 .env
 .env.*
-!.env.example
+!.env.*.example
 !.env.sample
 !.env.template
 backend/src/main/resources/application-local.yml
@@ -69,3 +69,7 @@ backend/src/main/resources/application-*.local.properties
 *.swp
 *.swo
 *~
+
+# 정적 API 문서 생성물
+docs/openapi.json
+/.gradle-temp

@@ -1,0 +1,351 @@
+# Backend Release Checklist
+
+FlowDeck 백엔드 배포 전 확인해야 할 운영 체크리스트입니다.
+
+이 문서는 MVP 개발 환경과 운영 배포 환경의 차이를 명확히 하고, 배포 전 누락되기 쉬운 설정과 검증 항목을 정리하기 위한 문서입니다.
+
+---
+
+## 1. 환경 변수 확인
+
+운영 환경에서는 로컬 기본값에 의존하지 않습니다.
+
+### Database
+
+- [ ] `DB_URL`
+- [ ] `DB_USERNAME`
+- [ ] `DB_PASSWORD`
+- [ ] RDS 또는 운영 PostgreSQL 접속 확인
+
+### Redis
+
+- [ ] `REDIS_HOST`
+- [ ] `REDIS_PORT`
+- [ ] `REDIS_SSL_ENABLED` (`ElastiCache` 전송 중 암호화 사용 시 `true`)
+- [ ] Redis 접속 확인
+- [ ] 인증용 Redis key prefix 충돌 여부 확인
+
+### JWT
+
+- [ ] `JWT_SECRET`
+- [ ] `JWT_ACCESS_TOKEN_EXPIRATION_SECONDS`
+- [ ] `JWT_REFRESH_TOKEN_EXPIRATION_SECONDS`
+- [ ] 운영 JWT secret은 로컬 기본값을 사용하지 않음
+
+### CORS
+
+- [ ] `CORS_ALLOWED_ORIGINS`
+- [ ] 운영 프론트 도메인 반영
+- [ ] localhost origin이 운영에 남아있지 않은지 확인
+
+### Port
+
+- [ ] 개발 Docker 호스트 포트는 기본 `8081` 사용 (`BACKEND_PORT=8081`, 컨테이너 내부 `8080`)
+- [ ] 운영 Docker 호스트 포트는 기본 `8080` 사용 (`BACKEND_PORT=8080`, 컨테이너 내부 `8080`)
+- [ ] 같은 서버에서 개발/운영을 함께 띄울 경우 호스트 포트 충돌이 없는지 확인
+
+---
+
+## 2. JPA ddl-auto 설정
+
+로컬 개발에서는 빠른 개발을 위해 `ddl-auto=update`를 사용할 수 있습니다.
+
+운영에서는 Hibernate 자동 스키마 변경에 의존하지 않습니다.
+
+권장 기준:
+
+- local: `update`
+- test: `create-drop` 또는 테스트 profile 설정
+- production: `validate` 또는 `none`
+
+체크:
+
+- [ ] 운영 profile에서 `JPA_DDL_AUTO=update`를 사용하지 않음
+- [ ] 운영 DB 스키마는 명시적 SQL 또는 마이그레이션 도구로 관리
+- [ ] 배포 전 staging DB에서 schema validation 확인
+
+---
+
+## 3. DB 마이그레이션 확인
+
+관련 문서:
+
+- `backend/docs/db-migration-plan.md`
+
+현재 운영 배포 전 확인해야 할 주요 컬럼:
+
+- [ ] `project_files.current_content`
+- [ ] `project_files.edit_revision`
+
+예상 SQL:
+
+```sql
+ALTER TABLE project_files
+ADD COLUMN current_content text NOT NULL DEFAULT '';
+
+ALTER TABLE project_files
+ADD COLUMN edit_revision bigint NOT NULL DEFAULT 0;
+```
+
+체크:
+
+- [ ] 기존 데이터가 있는 DB에서 SQL 적용 가능 여부 확인
+- [ ] `NOT NULL` 컬럼 추가 시 기본값 처리 확인
+- [ ] SQL 적용 후 애플리케이션 기동 확인
+- [ ] 추후 default 제거 여부 결정
+
+---
+
+## 4. Redis 동작 확인
+
+현재 Redis 사용 목적:
+
+- Refresh Token 저장
+- Access Token blacklist
+- 권한 변경/탈퇴 시 force logout
+- WebSocket presence/session
+
+체크:
+
+- [ ] 로그인 시 `auth:refresh:{userId}` 저장 확인
+- [ ] 로그인 시 refresh token 원문이 아닌 SHA-256 해시 저장 확인
+- [ ] 로그아웃 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
+- [ ] 로그아웃 시 refresh token 삭제 확인
+- [ ] 회원 탈퇴 시 refresh token 삭제 확인
+- [ ] 회원 탈퇴 시 `auth:blacklist:{sha256(accessToken)}` 저장 확인
+- [ ] 회원 탈퇴 시 `auth:force-logout:{userId}` cutoff timestamp 저장 확인
+- [ ] 회원 탈퇴 시 `presence:user:{userId}` 기반 WebSocket presence 세션 제거 확인
+- [ ] 멤버 권한 변경/탈퇴 시 `auth:force-logout:{userId}` cutoff timestamp 저장 확인
+- [ ] 멤버 권한 변경/탈퇴 시 기존 refresh token 삭제 확인
+- [ ] force logout 이전 Access Token 차단 및 재로그인 후 신규 Access Token 허용 확인
+- [ ] STOMP `CONNECT` 시 Access Token blacklist 및 force logout cutoff 검증 확인
+- [ ] TTL이 의도한 시간으로 설정되는지 확인
+- [x] Redis 토큰 원문 저장 제거 및 해시 저장 전환 반영
+
+---
+
+## 5. 보안 확인
+
+### JWT
+
+- [ ] 운영 JWT secret 교체
+- [x] Access Token 만료 시간 30분 확인
+- [x] Refresh Token 만료 시간 14일 확인
+- [x] 만료/무효/블랙리스트 토큰 응답 확인
+
+### API 접근 제어
+
+- [x] 인증 필요 API가 비로그인 요청을 차단하는지 확인
+- [x] OWNER 전용 API에 EDITOR/VIEWER 접근 불가 확인
+- [x] EDITOR 이상 API에 VIEWER 접근 불가 확인
+- [x] PRIVATE 프로젝트 비멤버 접근 차단 확인
+- [x] PUBLIC 프로젝트 비멤버 파일/버전 읽기 허용 확인
+- [x] PUBLIC 프로젝트 비멤버 채팅/presence/멤버/쓰기 접근 차단 확인
+
+### Swagger
+
+- [ ] 운영 환경에서 Swagger 공개 여부 결정
+- [ ] 공개하지 않을 경우 security 설정 또는 배포 설정으로 차단
+
+---
+
+## 6. 파일 API 확인
+
+관련 문서:
+
+- `backend/docs/file-api-contract.md`
+
+체크:
+
+- [x] 파일 상세 조회 응답에 `content` 포함
+- [x] 파일 상세 조회 응답에 `editRevision` 포함
+- [x] 파일 저장 요청에 `baseRevision` 포함
+- [x] 저장 성공 시 `editRevision` 증가
+- [x] 오래된 `baseRevision` 저장 시 `409 FILE_409` 응답
+- [x] 저장 충돌 응답에 `currentRevision`, `currentVersion`, `latestContent` 포함
+- [x] 1MB 초과 파일 저장 시 `FILE_400_3` 응답
+- [x] 명시적 버전 저장 시 `currentVersion` 증가
+- [x] 버전 복원 시 `currentContent`와 `editRevision` 갱신
+- [x] 오래된 `baseRevision` 복원 시 `409 FILE_409` 응답
+- [x] 파일 삭제 요청에 `expectedRevision` 포함
+- [x] 오래된 `expectedRevision` 삭제 시 `409 FILE_409` 응답
+- [x] 이름변경/이동은 `editRevision`을 증가시키지 않음
+- [x] 파일 상세 조회 성공 응답 프론트 필드 검증
+- [x] 파일 저장 성공 응답 프론트 필드 검증
+- [x] 명시적 버전 저장 성공 응답 프론트 필드 검증
+- [x] 버전 복원 성공 응답 프론트 필드 검증
+- [x] 주요 파일 API 에러 코드 HTTP 응답 검증
+- [x] 버전 타임라인 pagination 응답 검증
+- [x] 버전 diff 크기 제한 초과 시 `VERSION_413` 응답 검증
+- [x] PUBLIC 프로젝트 비멤버 파일 트리/상세/검색 조회 검증
+- [x] PUBLIC 프로젝트 비멤버 버전 목록/상세/타임라인/diff 조회 검증
+- [x] PUBLIC 프로젝트 비멤버 파일/버전 변경 작업 차단 검증
+
+---
+
+## 7. 테스트 확인
+
+배포 전 최소 확인:
+
+```powershell
+./gradlew spotlessApply
+./gradlew check
+```
+
+체크:
+
+- [x] 단위/통합 테스트 통과
+- [x] ArchitectureRulesTest 통과
+- [x] SwaggerIntegrationTest 통과
+- [x] Global API foundation 테스트 통과
+- [x] 파일 저장/버전/충돌 테스트 통과
+- [x] 멤버/권한 테스트 통과
+
+---
+
+## 8. 수동 검증 시나리오
+
+배포 후 또는 staging 환경에서 최소 수동 검증을 진행합니다.
+
+### 인증
+
+- [ ] 회원가입
+- [ ] 로그인
+- [ ] refresh token 재발급
+- [ ] 로그아웃
+- [ ] 로그아웃된 access token 차단
+- [ ] 회원 탈퇴
+- [ ] 마지막 OWNER 프로젝트 보유 시 회원 탈퇴 차단
+- [ ] 회원 탈퇴 후 동일 이메일 재가입
+- [ ] 회원 탈퇴 후 로그인/refresh token 재발급 차단
+
+### 프로젝트
+
+- [ ] 프로젝트 생성
+- [ ] 참여 프로젝트 목록 조회 (`GET /api/projects`)
+- [ ] 공개 프로젝트 목록 조회 (`GET /api/projects/public`)
+- [ ] 공개 프로젝트 비멤버 파일/버전 읽기 조회
+- [ ] 공개 프로젝트 비멤버 채팅/presence/멤버/쓰기 접근 차단
+- [ ] 프로젝트 상세 조회
+- [ ] 프로젝트 수정
+- [ ] 프로젝트 삭제
+
+### 멤버/권한
+
+- [ ] 멤버 초대
+- [ ] 멤버 권한 변경
+- [ ] VIEWER 파일 저장 실패
+- [ ] OWNER 마지막 1명 나가기 방지
+
+### 파일/버전
+
+- [ ] 파일 생성
+- [ ] 폴더 생성
+- [ ] 파일 상세 조회
+  - `content`가 에디터 초기 내용으로 표시되는지 확인
+  - `editRevision`을 저장 요청의 `baseRevision`으로 보관하는지 확인
+- [ ] 현재 내용 저장
+  - 저장 성공 후 `editRevision`이 갱신되는지 확인
+  - 저장 성공 후 `currentVersion`이 증가하지 않는지 확인
+- [ ] 명시적 버전 저장
+  - 버전 저장 성공 후 `currentVersion`이 증가하는지 확인
+  - 버전 저장 성공 후 `editRevision`이 증가하지 않는지 확인
+- [ ] 버전 목록 조회
+- [ ] 버전 타임라인 조회
+  - `page`, `size`, `totalVersions`, `hasNext`가 의도대로 표시되는지 확인
+  - 더보기 또는 스크롤 시 다음 `page`를 요청하는지 확인
+- [ ] 버전 diff 조회
+  - 선택 버전과 이전 버전의 `ADDED`, `REMOVED`, `UNCHANGED` 라인이 구분되는지 확인
+  - 제한 초과 시 `VERSION_413` 안내로 전환되는지 확인
+- [ ] 버전 복원
+  - 복원 성공 후 `currentVersion`과 `editRevision`이 모두 갱신되는지 확인
+- [ ] 저장 충돌 409 확인
+  - A가 파일 조회
+  - B가 같은 파일 저장
+  - A가 오래된 `baseRevision`으로 저장
+  - `409 FILE_409` 및 `currentRevision`, `latestContent` 포함 확인
+- [ ] 복원 충돌 409 확인
+  - A가 파일 조회
+  - B가 같은 파일 저장 또는 복원
+  - A가 오래된 `baseRevision`으로 버전 복원
+  - `409 FILE_409` 응답 확인
+- [ ] 삭제 충돌 409 확인
+  - A가 파일 조회
+  - B가 같은 파일 저장
+  - A가 오래된 `expectedRevision`으로 삭제
+  - `409 FILE_409` 응답 확인
+- [ ] 파일/폴더 이름변경 후 `editRevision`이 증가하지 않는지 확인
+- [ ] 파일/폴더 이동 후 `editRevision`이 증가하지 않는지 확인
+- [ ] 파일/폴더 삭제 후 파일 트리 갱신 확인
+- [ ] 파일 검색
+
+### 프론트 에러 분기
+
+- [ ] `FILE_409` 저장/복원/삭제 충돌 모달 표시
+- [ ] `FILE_409_1` 파일명 중복 안내
+- [ ] `FILE_400` 파일/폴더 타입 오류 안내
+- [ ] `FILE_400_1` 검색어 오류 안내
+- [ ] `FILE_400_2` 이동 불가 안내
+- [ ] `FILE_400_3` 파일 크기 초과 안내
+- [ ] `FILE_404` 파일 없음 안내 및 파일 트리 새로고침
+- [ ] `VERSION_404` 버전 없음 안내 및 버전 목록 새로고침
+- [ ] `VERSION_413` diff 크기 초과 안내 및 버전 상세 원문 fallback
+- [ ] `COMMON_400` 필수 요청값 누락 안내
+- [ ] `AUTH_401` 로그인 또는 토큰 재발급 흐름
+- [ ] `AUTH_403` 권한 부족 안내
+
+### 채팅/WebSocket
+
+- [ ] WebSocket 연결
+- [ ] STOMP JWT 인증
+- [ ] 프로젝트 채팅 조회
+- [ ] 프로젝트 채팅 전송
+- [ ] 프로젝트 채널 권한 검증
+
+### 실시간 파일 협업 준비
+
+- [x] `FILE_SAVED` 이벤트 payload 구현
+- [x] `FILE_RESTORED` 이벤트 payload 구현
+- [x] `FILE_DELETED` 이벤트 payload 구현
+- [x] `FILE_RENAMED` 이벤트 payload 구현
+- [x] `FILE_MOVED` 이벤트 payload 구현
+- [x] 프로젝트 presence payload 구현
+- [x] 파일 단위 editing presence 도입
+- [x] Redis presence TTL / heartbeat 정책 확정
+  - 프로젝트 접속 presence TTL 30초, 클라이언트 heartbeat 10초 기준
+
+---
+
+## 9. 배포 후 모니터링
+
+체크:
+
+- [ ] 애플리케이션 기동 로그 확인
+- [ ] DB connection pool 정상 확인
+- [ ] Redis connection 정상 확인
+- [ ] 인증 실패/권한 실패 로그 과다 발생 여부 확인
+- [ ] 500 에러 발생 여부 확인
+- [ ] 파일 저장/버전 저장 API 응답 시간 확인
+- [ ] WebSocket 연결 실패 로그 확인
+
+---
+
+## 10. 추후 보완 항목
+
+- [ ] Flyway 또는 Liquibase 도입
+- [ ] Testcontainers 전환 검토
+- [ ] 운영 profile 분리 강화
+- [ ] Swagger 운영 차단 정책 확정
+- [ ] 파일 크기 제한값 설정 분리
+- [ ] 버전 diff 제한값 설정 분리
+- [ ] 대용량 파일 저장 요구 증가 시 S3/Object Storage 전환 검토
+- [x] Public 프로젝트 공개 범위 최종 확정
+- [x] WebSocket presence Redis TTL 정책 확정
+- [x] 파일 편집은 강제 lock 대신 optimistic locking과 WebSocket 알림 방향으로 결정
+- [x] 회원 탈퇴 사용자의 WebSocket presence 즉시 제거 정책 구현
+  - `presence:user:{userId}` 보조 인덱스로 탈퇴 사용자 세션을 커밋 후 제거
+- [ ] CRDT/Yjs 기반 실시간 병합 도입 여부 결정
+- [x] 파일 이벤트 WebSocket 발행 구현
+- [x] 프로젝트 presence 구현
+- [x] 파일 단위 editing presence 구현
+- [ ] `metadataRevision` 또는 `treeRevision` 도입 여부 검토

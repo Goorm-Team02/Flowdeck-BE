@@ -1,0 +1,73 @@
+name: Swagger Docs Pages
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'backend/**'
+      - 'docs/**'
+      - '.github/workflows/swagger-docs-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+          cache-dependency-path: |
+            backend/*.gradle
+            backend/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Generate OpenAPI JSON
+        env:
+          OPENAPI_OUTPUT: ${{ github.workspace }}/docs/openapi.json
+        run: ./gradlew test --tests 'com.flowdeck.backend.integration.OpenApiDocsExportTest'
+
+      - name: Verify generated artifact
+        working-directory: .
+        run: test -s docs/openapi.json
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
