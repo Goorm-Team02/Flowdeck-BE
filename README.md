@@ -69,35 +69,6 @@ VITE_WS_URL=ws://localhost:8081/ws
 - `.env`, `.env.prod` 는 Git에 커밋하지 않습니다.
 - 프론트엔드 배포 도메인과 프리뷰 도메인은 `.env.prod`의 `CORS_ALLOWED_ORIGINS`에 콤마로 추가합니다. 와일드카드 패턴도 사용할 수 있습니다.
 - 운영 Docker 기본 포트는 호스트 `8080`입니다. 필요하면 `BACKEND_PORT`로 호스트 포트만 변경할 수 있습니다.
-- 자동 배포는 [`Deploy AWS Backend`](.github/workflows/deploy-aws.yml) 워크플로에서 처리합니다.
-  - `develop` push/merge: `backend-dev` 서버에 배포
-  - `main` push/merge: `backend-prod` 서버에 배포
-  - 배포 전 `./gradlew check` 가 통과해야 합니다.
-
-### GitHub Actions 배포 설정
-
-Repository Settings > Secrets and variables > Actions 에 아래 값을 등록합니다.
-
-Secrets:
-
-- `DEV_SSH_HOST`: 개발 서버 호스트 또는 IP
-- `DEV_SSH_USER`: 개발 서버 SSH 사용자
-- `DEV_SSH_PRIVATE_KEY`: 개발 서버 접속용 private key
-- `DEV_SSH_PORT`: 개발 서버 SSH 포트, 기본 포트면 생략 가능
-- `PROD_SSH_HOST`: 운영 서버 호스트 또는 IP
-- `PROD_SSH_USER`: 운영 서버 SSH 사용자
-- `PROD_SSH_PRIVATE_KEY`: 운영 서버 접속용 private key
-- `PROD_SSH_PORT`: 운영 서버 SSH 포트, 기본 포트면 생략 가능
-
-Variables:
-
-- `DEV_APP_DIR`: 개발 서버의 repo 경로, 예: `/opt/flowdeck/backend-dev/app`
-- `DEV_ENV_FILE`: 개발 서버 env 파일 경로, 예: `.env`
-- `PROD_APP_DIR`: 운영 서버의 repo 경로, 예: `/opt/flowdeck/backend-prod/app`
-- `PROD_ENV_FILE`: 운영 서버 env 파일 경로, 예: `.env.prod`
-
-서버에는 미리 GitHub에 접근 가능한 repo clone, Docker, Docker Compose plugin, env 파일이 준비되어 있어야 합니다.
-
 개발 서버 예시:
 
 ```bash
