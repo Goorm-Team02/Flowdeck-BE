@@ -49,6 +49,27 @@ jobs:
     environment: backend-dev
 
     steps:
+      - name: Validate backend-dev deployment configuration
+        env:
+          DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          DEV_APP_DIR: ${{ vars.DEV_APP_DIR }}
+          DEV_ENV_FILE: ${{ vars.DEV_ENV_FILE }}
+        run: |
+          missing=()
+
+          [[ -n "$DEV_SSH_HOST" ]] || missing+=(DEV_SSH_HOST)
+          [[ -n "$DEV_SSH_USER" ]] || missing+=(DEV_SSH_USER)
+          [[ -n "$DEV_SSH_PRIVATE_KEY" ]] || missing+=(DEV_SSH_PRIVATE_KEY)
+          [[ -n "$DEV_APP_DIR" ]] || missing+=(DEV_APP_DIR)
+          [[ -n "$DEV_ENV_FILE" ]] || missing+=(DEV_ENV_FILE)
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing backend-dev deployment configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
       - name: Deploy develop to backend-dev
         uses: appleboy/ssh-action@v1.2.2
         env:
@@ -62,7 +83,6 @@ jobs:
           key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
           port: ${{ secrets.DEV_SSH_PORT || 22 }}
           envs: APP_DIR,DEPLOY_BRANCH,ENV_FILE,COMPOSE_FILE
-          script_stop: true
           script: |
             set -euo pipefail
 
@@ -82,6 +102,27 @@ jobs:
     environment: backend-prod
 
     steps:
+      - name: Validate backend-prod deployment configuration
+        env:
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          PROD_APP_DIR: ${{ vars.PROD_APP_DIR }}
+          PROD_ENV_FILE: ${{ vars.PROD_ENV_FILE }}
+        run: |
+          missing=()
+
+          [[ -n "$PROD_SSH_HOST" ]] || missing+=(PROD_SSH_HOST)
+          [[ -n "$PROD_SSH_USER" ]] || missing+=(PROD_SSH_USER)
+          [[ -n "$PROD_SSH_PRIVATE_KEY" ]] || missing+=(PROD_SSH_PRIVATE_KEY)
+          [[ -n "$PROD_APP_DIR" ]] || missing+=(PROD_APP_DIR)
+          [[ -n "$PROD_ENV_FILE" ]] || missing+=(PROD_ENV_FILE)
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing backend-prod deployment configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
       - name: Deploy main to backend-prod
         uses: appleboy/ssh-action@v1.2.2
         env:
@@ -95,7 +136,6 @@ jobs:
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
           envs: APP_DIR,DEPLOY_BRANCH,ENV_FILE,COMPOSE_FILE
-          script_stop: true
           script: |
             set -euo pipefail
 
