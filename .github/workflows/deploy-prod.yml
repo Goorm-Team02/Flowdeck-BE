@@ -1,0 +1,36 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Deploy to EC2 using SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "${{ secrets.PROD_EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy FlowDeck prod from main" \
+            --parameters 'commands=[
+              "cd /opt/flowdeck/backend-prod/app",
+              "git pull origin main",
+              "docker compose -f docker-compose.prod.yaml down",
+              "docker compose -f docker-compose.prod.yaml up -d --build",
+              "docker ps"
+            ]' \
+            --region ap-northeast-2
